@@ -396,7 +396,6 @@ net.ipv4.tcp_rmem = 4096 65536 67108864
 net.ipv4.tcp_wmem = 4096 65536 67108864
 net.ipv4.tcp_mtu_probing = 1
 
-net.ipv4.ip_forward = 1
 net.netfilter.nf_conntrack_max = 2097152
 net.netfilter.nf_conntrack_tcp_timeout_close_wait = 60
 net.netfilter.nf_conntrack_tcp_timeout_fin_wait = 60
