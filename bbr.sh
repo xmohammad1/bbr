@@ -1,5 +1,5 @@
 bash <(curl -LS https://raw.githubusercontent.com/hiddify/Hiddify-Manager/main/common/google-bbr.sh)
-
+sudo modprobe nf_conntrack
 # Define the settings
 SETTINGS="
 # Common settings
