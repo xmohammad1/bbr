@@ -3,7 +3,7 @@ sudo modprobe nf_conntrack
 # Define the settings
 SETTINGS="
 # max open files
-fs.file-max = 51200
+fs.file-max = 200000
 # max read buffer
 net.core.rmem_max = 67108864
 # max write buffer
@@ -13,7 +13,7 @@ net.core.rmem_default = 65536
 # default write buffer
 net.core.wmem_default = 65536
 # max processor input queue
-net.core.netdev_max_backlog = 4096
+net.core.netdev_max_backlog = 250000
 # max backlog
 net.core.somaxconn = 4096
 
