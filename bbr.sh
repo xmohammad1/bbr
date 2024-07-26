@@ -21,8 +21,6 @@ net.core.somaxconn = 4096
 net.ipv4.tcp_syncookies = 1
 # reuse timewait sockets when safe
 net.ipv4.tcp_tw_reuse = 1
-# turn off fast timewait sockets recycling
-net.ipv4.tcp_tw_recycle = 0
 # short FIN timeout
 net.ipv4.tcp_fin_timeout = 30
 # short keepalive time
