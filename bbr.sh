@@ -1,5 +1,6 @@
 bash <(curl -LS https://raw.githubusercontent.com/hiddify/Hiddify-Manager/main/common/google-bbr.sh)
 # Define the settings
+sudo modprobe nf_conntrack
 SETTINGS="
 # Common settings
 fs.file-max = 200000
