@@ -3,13 +3,15 @@ bash <(curl -LS https://raw.githubusercontent.com/hiddify/Hiddify-Manager/main/c
 sudo modprobe nf_conntrack
 SETTINGS="
 # Common settings
+net.ipv4.tcp_low_latency = 1
+net.ipv4.tcp_slow_start_after_idle = 0
 fs.file-max = 200000
 net.core.rmem_max = 67108864
 net.core.wmem_max = 67108864
 net.core.rmem_default = 65536
 net.core.wmem_default = 65536
 net.core.netdev_max_backlog = 250000
-net.core.somaxconn = 4096
+net.core.somaxconn = 8192
 net.ipv4.tcp_syncookies = 1
 net.ipv4.tcp_tw_reuse = 1
 net.ipv4.tcp_fin_timeout = 10
