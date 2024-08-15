@@ -30,7 +30,7 @@ bash <(curl -LS https://raw.githubusercontent.com/hiddify/Hiddify-Manager/main/c
 # net.ipv4.conf.all.route_localnet = 1
 
 cat >> /etc/sysctl.conf <<EOF
-# # Common settings
+# Common settings
 net.ipv4.tcp_low_latency = 1
 net.ipv4.tcp_slow_start_after_idle = 0
 net.ipv4.tcp_fastopen = 3
