@@ -1,7 +1,7 @@
 bash <(curl -LS https://raw.githubusercontent.com/hiddify/Hiddify-Manager/main/common/google-bbr.sh)
 # Define the settings
 sudo modprobe nf_conntrack
-SETTINGS="
+cat >> /etc/sysctl.conf <<EOF
 # Common settings
 net.ipv4.tcp_low_latency = 1
 net.ipv4.tcp_slow_start_after_idle = 0
@@ -34,9 +34,6 @@ net.netfilter.nf_conntrack_tcp_timeout_fin_wait = 60
 net.netfilter.nf_conntrack_tcp_timeout_time_wait = 60
 
 net.ipv4.conf.all.route_localnet = 1
-"
-
-# Append the settings to /etc/sysctl.conf
-echo "$SETTINGS" >> /etc/sysctl.conf
+EOF
 sysctl -p
 echo "System settings have been applied."
