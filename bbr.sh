@@ -1,11 +1,7 @@
 bash <(curl -LS https://raw.githubusercontent.com/hiddify/Hiddify-Manager/main/common/google-bbr.sh)
+
 # Define the settings
 # sudo modprobe nf_conntrack
-# cat >> /etc/sysctl.conf <<EOF
-# # Common settings
-# net.ipv4.tcp_low_latency = 1
-# net.ipv4.tcp_slow_start_after_idle = 0
-# net.ipv4.tcp_fastopen = 3
 # fs.file-max = 200000
 # net.core.rmem_max = 67108864
 # net.core.wmem_max = 67108864
@@ -17,7 +13,6 @@ bash <(curl -LS https://raw.githubusercontent.com/hiddify/Hiddify-Manager/main/c
 # net.ipv4.tcp_tw_reuse = 1
 # net.ipv4.tcp_fin_timeout = 10
 # net.ipv4.tcp_keepalive_time = 600
-# net.ipv4.ip_local_port_range = 10000 65000
 # net.ipv4.tcp_max_syn_backlog = 8192
 
 # net.ipv4.tcp_max_tw_buckets = 5000
@@ -32,8 +27,13 @@ bash <(curl -LS https://raw.githubusercontent.com/hiddify/Hiddify-Manager/main/c
 # net.netfilter.nf_conntrack_tcp_timeout_close_wait = 60
 # net.netfilter.nf_conntrack_tcp_timeout_fin_wait = 60
 # net.netfilter.nf_conntrack_tcp_timeout_time_wait = 60
-
 # net.ipv4.conf.all.route_localnet = 1
-# EOF
-# sysctl -p
+
+cat >> /etc/sysctl.conf <<EOF
+# # Common settings
+net.ipv4.tcp_low_latency = 1
+net.ipv4.tcp_slow_start_after_idle = 0
+net.ipv4.tcp_fastopen = 3
+EOF
+sysctl -p
 echo "System settings have been applied."
