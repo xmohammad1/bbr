@@ -3,6 +3,15 @@ bash <(curl -LS https://raw.githubusercontent.com/hiddify/Hiddify-Manager/main/c
 # Define the settings
 sudo modprobe nf_conntrack
 
+qdisc="net.core.default_qdisc = fq"
+tcp_cc="net.ipv4.tcp_congestion_control = bbr"
+if ! grep -q "^$qdisc" /etc/sysctl.conf; then
+    echo "$qdisc" | sudo tee -a /etc/sysctl.conf
+fi
+if ! grep -q "^$tcp_cc" /etc/sysctl.conf; then
+    echo "$tcp_cc" | sudo tee -a /etc/sysctl.conf
+fi
+
 cat >> /etc/sysctl.conf <<EOF
 # Common settings
 net.ipv4.tcp_low_latency = 1
