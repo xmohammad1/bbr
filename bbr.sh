@@ -11,6 +11,7 @@ cat >> $Sysctl_file <<EOF
 net.ipv4.tcp_low_latency = 1
 net.ipv4.tcp_slow_start_after_idle = 0
 net.ipv4.tcp_fastopen = 3
+net.ipv4.tcp_sack = 1
 
 fs.file-max = 200000
 net.core.rmem_max = 67108864
