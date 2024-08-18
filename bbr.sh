@@ -3,11 +3,13 @@ bash <(curl -LS https://raw.githubusercontent.com/hiddify/Hiddify-Manager/main/c
 # Define the settings
 sudo modprobe nf_conntrack
 Sysctl_file="/etc/sysctl.conf"
-grep -q 'net.core.default_qdisc=fq' $Sysctl_file || echo 'net.core.default_qdisc=fq' >> $Sysctl_file
-grep -q 'net.ipv4.tcp_congestion_control=bbr' $Sysctl_file || echo 'net.ipv4.tcp_congestion_control=bbr' >> $Sysctl_file
+sudo sed -i '/net\.core\.default_qdisc/d' $Sysctl_file
+sudo sed -i '/net\.ipv4\.tcp_congestion_control/d' $Sysctl_file
 
 cat >> $Sysctl_file <<EOF
 # Common settings
+net.ipv4.tcp_congestion_control = bbr
+net.core.default_qdisc = fq
 net.ipv4.tcp_low_latency = 1
 net.ipv4.tcp_slow_start_after_idle = 0
 net.ipv4.tcp_fastopen = 3
