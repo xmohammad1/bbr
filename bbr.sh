@@ -1,4 +1,27 @@
 bash <(curl -LS https://raw.githubusercontent.com/hiddify/Hiddify-Manager/main/common/google-bbr.sh)
+# Define the module name
+MODULE_NAME="nf_conntrack"
+
+# Define the path to the configuration file
+CONF_FILE="/etc/modules-load.d/${MODULE_NAME}.conf"
+
+# Check if the configuration file already exists
+if [ -f "$CONF_FILE" ]; then
+    echo "Configuration file $CONF_FILE already exists."
+else
+    # Create a new configuration file
+    echo "$MODULE_NAME" | sudo tee "$CONF_FILE" > /dev/null
+fi
+
+# Load the module immediately (without reboot)
+sudo modprobe "$MODULE_NAME"
+
+# Verify if the module is loaded
+if lsmod | grep -q "$MODULE_NAME"; then
+    echo "Module $MODULE_NAME is successfully loaded."
+else
+    echo "Failed to load the module $MODULE_NAME."
+fi
 
 # Define the settings
 Sysctl_file="/etc/sysctl.conf"
