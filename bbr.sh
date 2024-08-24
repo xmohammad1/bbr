@@ -74,6 +74,7 @@ net.ipv4.conf.all.route_localnet = 1
 EOF
 sysctl -p
 echo "System settings have been applied."
+SYS_PATH="/etc/sysctl.conf"
 SSH_PATH="/etc/ssh/sshd_config"
 PROF_PATH="/etc/profile"
 # Remove old SSH config to prevent duplicates.
