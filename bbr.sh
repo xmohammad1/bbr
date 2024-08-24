@@ -4,7 +4,6 @@ if ! grep -q $(hostname) $HOST_PATH; then
 echo "127.0.1.1 $(hostname)" | sudo tee -a $HOST_PATH > /dev/null
 echo "Hosts Fixed."
 fi
-
 bash <(curl -LS https://raw.githubusercontent.com/hiddify/Hiddify-Manager/main/common/google-bbr.sh)
 # Define the module name
 MODULE_NAME="nf_conntrack"
@@ -75,3 +74,122 @@ net.ipv4.conf.all.route_localnet = 1
 EOF
 sysctl -p
 echo "System settings have been applied."
+SSH_PATH="/etc/ssh/sshd_config"
+PROF_PATH="/etc/profile"
+# Remove old SSH config to prevent duplicates.
+remove_old_ssh_conf() {
+    ## Remove these lines
+    sed -i -e 's/#UseDNS yes/UseDNS no/' \
+        -e 's/#Compression no/Compression yes/' \
+        -e 's/Ciphers .*/Ciphers aes256-ctr,chacha20-poly1305@openssh.com/' \
+        -e '/MaxAuthTries/d' \
+        -e '/MaxSessions/d' \
+        -e '/TCPKeepAlive/d' \
+        -e '/ClientAliveInterval/d' \
+        -e '/ClientAliveCountMax/d' \
+        -e '/AllowAgentForwarding/d' \
+        -e '/AllowTcpForwarding/d' \
+        -e '/GatewayPorts/d' \
+        -e '/PermitTunnel/d' \
+        -e '/X11Forwarding/d' "$SSH_PATH"
+
+}
+# Update SSH config
+update_sshd_conf() {
+    echo "Optimizing SSH..."
+    ## Enable TCP keep-alive messages
+    echo "TCPKeepAlive yes" | tee -a "$SSH_PATH"
+
+    ## Configure client keep-alive messages
+    echo "ClientAliveInterval 3000" | tee -a "$SSH_PATH"
+    echo "ClientAliveCountMax 100" | tee -a "$SSH_PATH"
+
+    ## Allow agent forwarding
+    echo "AllowAgentForwarding yes" | tee -a "$SSH_PATH"
+
+    ## Allow TCP forwarding
+    echo "AllowTcpForwarding yes" | tee -a "$SSH_PATH"
+
+    ## Enable gateway ports
+    echo "GatewayPorts yes" | tee -a "$SSH_PATH"
+
+    ## Enable tunneling
+    echo "PermitTunnel yes" | tee -a "$SSH_PATH"
+
+    ## Enable X11 graphical interface forwarding
+    echo "X11Forwarding yes" | tee -a "$SSH_PATH"
+
+    ## Restart the SSH service to apply the changes
+    sudo systemctl restart ssh
+
+    echo "SSH is Optimized."
+
+}
+# System Limits Optimizations
+limits_optimizations() {
+    echo "Optimizing System Limits..."
+
+    ## Clear old ulimits
+    sed -i '/ulimit -c/d' $PROF_PATH
+    sed -i '/ulimit -d/d' $PROF_PATH
+    sed -i '/ulimit -f/d' $PROF_PATH
+    sed -i '/ulimit -i/d' $PROF_PATH
+    sed -i '/ulimit -l/d' $PROF_PATH
+    sed -i '/ulimit -m/d' $PROF_PATH
+    sed -i '/ulimit -n/d' $PROF_PATH
+    sed -i '/ulimit -q/d' $PROF_PATH
+    sed -i '/ulimit -s/d' $PROF_PATH
+    sed -i '/ulimit -t/d' $PROF_PATH
+    sed -i '/ulimit -u/d' $PROF_PATH
+    sed -i '/ulimit -v/d' $PROF_PATH
+    sed -i '/ulimit -x/d' $PROF_PATH
+    sed -i '/ulimit -s/d' $PROF_PATH
+
+
+    ## Add new ulimits
+    ## The maximum size of core files created.
+    echo "ulimit -c unlimited" | tee -a $PROF_PATH
+
+    ## The maximum size of a process's data segment
+    echo "ulimit -d unlimited" | tee -a $PROF_PATH
+
+    ## The maximum size of files created by the shell (default option)
+    echo "ulimit -f unlimited" | tee -a $PROF_PATH
+
+    ## The maximum number of pending signals
+    echo "ulimit -i unlimited" | tee -a $PROF_PATH
+
+    ## The maximum size that may be locked into memory
+    echo "ulimit -l unlimited" | tee -a $PROF_PATH
+
+    ## The maximum memory size
+    echo "ulimit -m unlimited" | tee -a $PROF_PATH
+
+    ## The maximum number of open file descriptors
+    echo "ulimit -n 1048576" | tee -a $PROF_PATH
+
+    ## The maximum POSIX message queue size
+    echo "ulimit -q unlimited" | tee -a $PROF_PATH
+
+    ## The maximum stack size
+    echo "ulimit -s -H 65536" | tee -a $PROF_PATH
+    echo "ulimit -s 32768" | tee -a $PROF_PATH
+
+    ## The maximum number of seconds to be used by each process.
+    echo "ulimit -t unlimited" | tee -a $PROF_PATH
+
+    ## The maximum number of processes available to a single user
+    echo "ulimit -u unlimited" | tee -a $PROF_PATH
+
+    ## The maximum amount of virtual memory available to the process
+    echo "ulimit -v unlimited" | tee -a $PROF_PATH
+
+    ## The maximum number of file locks
+    echo "ulimit -x unlimited" | tee -a $PROF_PATH
+
+    echo "System Limits are Optimized."
+
+}
+remove_old_ssh_conf
+update_sshd_conf
+limits_optimizations
