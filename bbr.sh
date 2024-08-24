@@ -191,7 +191,6 @@ limits_optimizations() {
     echo "System Limits are Optimized."
 
 }
-sysctl_optimizations
 remove_old_ssh_conf
 update_sshd_conf
 limits_optimizations
@@ -426,3 +425,4 @@ EOF
     sudo sysctl -p
     echo "Network is Optimized."
 }
+sysctl_optimizations
