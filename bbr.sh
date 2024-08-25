@@ -191,10 +191,6 @@ limits_optimizations() {
     echo "System Limits are Optimized."
 
 }
-remove_old_ssh_conf
-update_sshd_conf
-limits_optimizations
-
 sysctl_optimizations() {
     echo "Optimizing the Network..."
 
@@ -425,4 +421,9 @@ EOF
     sudo sysctl -p
     echo "Network is Optimized."
 }
-sysctl_optimizations
+if [[ $(lsb_release -rs) != "24.04" ]]; then
+    remove_old_ssh_conf
+    update_sshd_conf
+    limits_optimizations
+    sysctl_optimizations
+fi
