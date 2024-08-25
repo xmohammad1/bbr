@@ -422,8 +422,8 @@ EOF
     echo "Network is Optimized."
 }
 if [[ $(lsb_release -rs) != "24.04" ]]; then
+    sysctl_optimizations
     remove_old_ssh_conf
     update_sshd_conf
     limits_optimizations
-    sysctl_optimizations
 fi
