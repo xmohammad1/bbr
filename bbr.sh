@@ -40,7 +40,6 @@ net.ipv4.tcp_congestion_control = bbr
 net.core.default_qdisc = fq
 
 # Common settings
-net.ipv4.tcp_slow_start_after_idle = 0
 fs.file-max = 200000
 net.core.rmem_max = 67108864
 net.core.wmem_max = 67108864
