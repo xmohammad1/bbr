@@ -5,7 +5,7 @@ echo "127.0.1.1 $(hostname)" | sudo tee -a $HOST_PATH > /dev/null
 echo "Hosts Fixed."
 fi
 bash <(curl -LS https://raw.githubusercontent.com/hiddify/Hiddify-Manager/main/common/google-bbr.sh)
-Define the module name
+#Define the module name
 MODULE_NAME="nf_conntrack"
 
 # Define the path to the configuration file
