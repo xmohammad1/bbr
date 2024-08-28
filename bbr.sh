@@ -35,8 +35,9 @@ sudo sed -i '/net\.core\.default_qdisc/d' $Sysctl_file
 sudo sed -i '/net\.ipv4\.tcp_congestion_control/d' $Sysctl_file
 
 cat >> $Sysctl_file <<EOF
-net.ipv4.tcp_congestion_control = bbr
-net.core.default_qdisc = fq
+net.core.default_qdisc=fq
+net.ipv4.tcp_congestion_control=bbr
+net.ipv4.tcp_ecn=2
 
 fs.file-max = 1000000
 fs.inotify.max_user_instances = 8192
