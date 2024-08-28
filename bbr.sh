@@ -35,6 +35,9 @@ sudo sed -i '/net\.core\.default_qdisc/d' $Sysctl_file
 sudo sed -i '/net\.ipv4\.tcp_congestion_control/d' $Sysctl_file
 sudo modprobe nf_conntrack
 cat >> $Sysctl_file <<EOF
+net.ipv4.tcp_congestion_control = bbr
+net.core.default_qdisc = fq
+
 fs.file-max = 1000000
 fs.inotify.max_user_instances = 8192
 
