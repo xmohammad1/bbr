@@ -58,9 +58,9 @@ net.ipv4.tcp_mtu_probing = 1
 # Additional settings
 net.ipv4.ip_forward = 1
 net.netfilter.nf_conntrack_max = 2097152
-net.netfilter.nf_conntrack_tcp_timeout_close_wait = 60
-net.netfilter.nf_conntrack_tcp_timeout_fin_wait = 60
-net.netfilter.nf_conntrack_tcp_timeout_time_wait = 60
+net.netfilter.nf_conntrack_tcp_timeout_close_wait = 120
+net.netfilter.nf_conntrack_tcp_timeout_fin_wait = 120
+net.netfilter.nf_conntrack_tcp_timeout_time_wait = 120
 net.ipv4.conf.all.route_localnet = 1
 EOF
     cat >> /etc/security/limits.conf <<-EOF
