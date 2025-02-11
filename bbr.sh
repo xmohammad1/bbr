@@ -124,13 +124,8 @@ sudo modprobe "$MODULE_NAME"
 
 # Define the settings
 Sysctl_file="/etc/sysctl.d/hiddify.conf"
-sudo sed -i '/net\.core\.default_qdisc/d' $Sysctl_file
-sudo sed -i '/net\.ipv4\.tcp_congestion_control/d' $Sysctl_file
 
 cat >> $Sysctl_file <<EOF
-net.core.default_qdisc=fq
-net.ipv4.tcp_congestion_control=bbr
-
 # Common settings
 fs.file-max = 200000
 net.core.rmem_max = 67108864
@@ -154,9 +149,6 @@ net.ipv4.tcp_wmem = 4096 65536 67108864
 net.ipv4.tcp_keepalive_probes = 7
 net.ipv4.tcp_keepalive_intvl = 30
 net.ipv4.tcp_mtu_probing = 1
-
-# net.core.default_qdisc=fq
-# net.ipv4.tcp_congestion_control=bbr
 
 # Additional settings
 net.ipv4.ip_forward = 1
