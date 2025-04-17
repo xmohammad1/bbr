@@ -5,30 +5,27 @@ echo "127.0.1.1 $(hostname)" | sudo tee -a $HOST_PATH > /dev/null
 echo "Hosts Fixed."
 fi
 bash <(curl -LS https://raw.githubusercontent.com/hiddify/Hiddify-Manager/main/common/google-bbr.sh)
-#Define the module name
-MODULE_NAME="nf_conntrack"
 
-# Define the path to the configuration file
-CONF_FILE="/etc/modules-load.d/${MODULE_NAME}.conf"
+if [[ $(lsb_release -rs) != "24.04" ]]; then
+    # Define the settings
+    Sysctl_file="/etc/sysctl.conf"
+    sudo sed -i '/net\.core\.default_qdisc/d' $Sysctl_file
+    sudo sed -i '/net\.ipv4\.tcp_congestion_control/d' $Sysctl_file
+    #Define the module name
+    MODULE_NAME="nf_conntrack"
 
-# Check if the configuration file already exists
-if [ -f "$CONF_FILE" ]; then
-    echo "Configuration file $CONF_FILE already exists."
-else
-    # Create a new configuration file
-    echo "$MODULE_NAME" | sudo tee "$CONF_FILE" > /dev/null
-fi
+    # Define the path to the configuration file
+    CONF_FILE="/etc/modules-load.d/${MODULE_NAME}.conf"
 
-# Load the module immediately (without reboot)
-sudo modprobe "$MODULE_NAME"
-
-
-# Define the settings
-Sysctl_file="/etc/sysctl.conf"
-sudo sed -i '/net\.core\.default_qdisc/d' $Sysctl_file
-sudo sed -i '/net\.ipv4\.tcp_congestion_control/d' $Sysctl_file
-
-cat >> $Sysctl_file <<EOF
+    # Check if the configuration file already exists
+    if [ -f "$CONF_FILE" ]; then
+        echo "Configuration file $CONF_FILE already exists."
+    else
+        # Create a new configuration file
+        echo "$MODULE_NAME" | sudo tee "$CONF_FILE" > /dev/null
+    fi
+    sudo modprobe "$MODULE_NAME"
+    cat >> $Sysctl_file <<EOF
 net.core.default_qdisc=fq
 net.ipv4.tcp_congestion_control=bbr
 
@@ -69,7 +66,7 @@ EOF
 *               hard    nofile          1000000
 EOF
 
-echo "ulimit -SHn 1000000" >> /etc/profile
-source /etc/profile
-
+    echo "ulimit -SHn 1000000" >> /etc/profile
+    source /etc/profile
+fi
 sysctl -p
