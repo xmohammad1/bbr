@@ -4,6 +4,7 @@ if ! grep -q $(hostname) $HOST_PATH; then
 echo "127.0.1.1 $(hostname)" | sudo tee -a $HOST_PATH > /dev/null
 echo "Hosts Fixed."
 fi
+sudo modprobe tcp_bbr
 bash <(curl -LS https://raw.githubusercontent.com/hiddify/Hiddify-Manager/main/common/google-bbr.sh)
 
 if [[ $(lsb_release -rs) != "24.04" ]]; then
