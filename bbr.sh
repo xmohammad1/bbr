@@ -4,12 +4,15 @@ if ! grep -q $(hostname) $HOST_PATH; then
 echo "127.0.1.1 $(hostname)" | sudo tee -a $HOST_PATH > /dev/null
 echo "Hosts Fixed."
 fi
+Sysctl_file="/etc/sysctl.conf"
 sudo modprobe tcp_bbr
 bash <(curl -LS https://raw.githubusercontent.com/hiddify/Hiddify-Manager/main/common/google-bbr.sh)
-
+cat >> $Sysctl_file <<EOF
+net.ipv4.ip_forward = 1
+net.ipv6.conf.all.forwarding = 1
+EOF
 if [[ $(lsb_release -rs) != "24.04" ]]; then
     # Define the settings
-    Sysctl_file="/etc/sysctl.conf"
     sudo sed -i '/net\.core\.default_qdisc/d' $Sysctl_file
     sudo sed -i '/net\.ipv4\.tcp_congestion_control/d' $Sysctl_file
     #Define the module name
@@ -56,7 +59,6 @@ net.ipv4.tcp_mtu_probing = 1
 # net.ipv4.tcp_congestion_control=bbr
 
 # Additional settings
-net.ipv4.ip_forward = 1
 net.netfilter.nf_conntrack_max = 2097152
 net.netfilter.nf_conntrack_tcp_timeout_close_wait = 60
 net.netfilter.nf_conntrack_tcp_timeout_fin_wait = 60
