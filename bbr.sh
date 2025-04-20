@@ -6,6 +6,7 @@ echo "Hosts Fixed."
 fi
 Sysctl_file="/etc/sysctl.conf"
 sudo modprobe tcp_bbr
+echo tcp_bbr | sudo tee /etc/modules-load.d/tcp_bbr.conf
 bash <(curl -LS https://raw.githubusercontent.com/hiddify/Hiddify-Manager/main/common/google-bbr.sh)
 cat >> $Sysctl_file <<EOF
 net.ipv4.ip_forward = 1
