@@ -21,6 +21,7 @@ net.ipv4.tcp_fastopen = 3
 net.ipv4.tcp_keepalive_time = 600
 net.ipv4.tcp_keepalive_intvl = 60
 net.ipv4.tcp_keepalive_probes = 3
+net.ipv4.tcp_mtu_probing = 1
 net.ipv4.tcp_max_syn_backlog = 8192
 net.ipv4.tcp_tw_reuse = 1
 net.ipv4.conf.all.accept_redirects = 0
