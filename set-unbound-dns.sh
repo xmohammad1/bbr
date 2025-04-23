@@ -15,10 +15,11 @@ echo "=== Setting up Unbound control keys ==="
 unbound-control-setup
 
 echo "=== Writing custom Unbound config ==="
-CONF_DIR="/etc/unbound/unbound.conf.d"
-CONF_FILE="${CONF_DIR}/custom.conf"
-
-mkdir -p "${CONF_DIR}"
+CONF_DIR="/etc/unbound"
+CONF_FILE="${CONF_DIR}/unbound.conf"
+sed -i '/^[[:space:]]*include-toplevel: "\/etc\/unbound\/unbound.conf.d\/\*\.conf"/{
+  /^[[:space:]]*#/! s|^[[:space:]]*|# |
+}' "$CONF_FILE"
 cat > "${CONF_FILE}" <<'EOF'
 server:
     cache-max-ttl: 86400
@@ -46,10 +47,10 @@ server:
 forward-zone:
     name: "."
     forward-first: no
-    forward-addr: 1.1.1.1
     forward-addr: 8.8.8.8
-    forward-addr: 2606:4700:4700::1111
+    forward-addr: 1.1.1.1
     forward-addr: 2001:4860:4860::8888
+    forward-addr: 2606:4700:4700::1111
 EOF
 
 echo "=== Checking Unbound configuration ==="
@@ -57,6 +58,10 @@ unbound-checkconf
 
 echo "=== Restarting Unbound ==="
 systemctl restart unbound
+
+echo "=== Testing ==="
+s=${1:-127.0.0.1}; d=${2:-google.com}
+dig @"$s" "$d" +short | grep -q . && echo "DNS OK ✅" || echo "DNS FAIL ❌" 
 
 echo "=== Disabling systemd-resolved ==="
 systemctl stop systemd-resolved
