@@ -12,7 +12,7 @@ cat >> $Sysctl_file <<EOF
 net.ipv4.ip_forward = 1
 net.ipv6.conf.all.forwarding = 1
 fs.file-max = 1000000
-net.core.somaxconn = 4096
+net.core.somaxconn = 65536
 net.ipv4.tcp_window_scaling = 1
 net.ipv4.tcp_timestamps = 1
 net.ipv4.tcp_rmem = 4096 87380 16777216
