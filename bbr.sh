@@ -56,12 +56,13 @@ if [[ $(lsb_release -rs) != "24.04" ]]; then
     #     echo "$MODULE_NAME" | sudo tee "$CONF_FILE" > /dev/null
     # fi
     # sudo modprobe "$MODULE_NAME"
-    cat >> /etc/security/limits.conf <<-EOF
+fi
+cat >> /etc/security/limits.conf <<-EOF
 *               soft    nofile          1000000
 *               hard    nofile          1000000
 EOF
 
-    echo "ulimit -SHn 1000000" >> /etc/profile
-    source /etc/profile
-fi
+echo "ulimit -SHn 1000000" >> /etc/profile
+source /etc/profile
+
 sysctl -p
