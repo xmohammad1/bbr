@@ -28,6 +28,7 @@ net.ipv4.conf.all.accept_redirects = 0
 net.ipv4.conf.all.send_redirects = 0
 net.ipv4.tcp_syncookies = 1
 net.ipv4.tcp_sack = 1
+net.ipv4.tcp_dsack = 1
 net.ipv4.conf.all.rp_filter = 1
 net.core.rmem_max = 16777216
 net.core.wmem_max = 16777216
