@@ -17,11 +17,15 @@ unbound-control-setup
 echo "=== Writing custom Unbound config ==="
 CONF_DIR="/etc/unbound"
 CONF_FILE="${CONF_DIR}/unbound.conf"
-sed -i '/^[[:space:]]*include-toplevel: "\/etc\/unbound\/unbound.conf.d\/\*\.conf"/{
-  /^[[:space:]]*#/! s|^[[:space:]]*|# |
-}' "$CONF_FILE"
+cores=$(
+  getconf _NPROCESSORS_ONLN 2>/dev/null \
+  || nproc --all 2>/dev/null \
+  || grep -c '^processor' /proc/cpuinfo
+)
+
 cat > "${CONF_FILE}" <<'EOF'
 server:
+    num-threads: ${cores}
     cache-max-ttl: 86400
     cache-min-ttl: 3600
     prefetch: yes
@@ -29,6 +33,7 @@ server:
     do-ip6: yes
     do-udp: yes
     do-tcp: yes
+    so-reuseport: yes
     interface: 127.0.0.1
     interface: ::1
     port: 53
