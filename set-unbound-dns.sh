@@ -23,7 +23,7 @@ cores=$(
   || grep -c '^processor' /proc/cpuinfo
 )
 
-cat > "${CONF_FILE}" <<'EOF'
+cat > "${CONF_FILE}" <<EOF
 server:
     num-threads: ${cores}
     cache-max-ttl: 86400
