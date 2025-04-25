@@ -130,8 +130,8 @@ show_current_dns
 
 echo -e "\n${GREEN}DNS Configuration Complete!${NC}"
 echo -e "${BLUE}==================================================${NC}"
-echo -e "DNS servers set to: Cloudflare (1.1.1.1, 1.0.0.1)"
-echo -e "                    Google    (8.8.8.8, 8.8.4.4)"
+echo -e "DNS servers set to: Cloudflare (1.1.1.1)"
+echo -e "                    Google    (8.8.8.8)"
 echo -e "${BLUE}==================================================${NC}"
 echo -e "You can test your DNS setup with: ${YELLOW}dig example.com${NC}"
 echo -e "If you experience any issues, the backup is at: ${YELLOW}$backup_file${NC}\n"
