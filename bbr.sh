@@ -41,6 +41,7 @@ net.ipv4.tcp_syncookies = 1
 net.ipv4.udp_mem = 65536 1048576 33554432
 net.ipv4.tcp_sack = 1
 net.ipv4.tcp_dsack = 1
+net.ipv4.tcp_slow_start_after_idle = 0
 net.ipv4.tcp_ecn = 1
 net.ipv4.tcp_ecn_fallback = 1
 net.ipv4.conf.all.rp_filter = 1
