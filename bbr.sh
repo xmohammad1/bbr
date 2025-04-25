@@ -56,12 +56,15 @@ kernel.pid_max = 100000
 vm.max_map_count = 262144
 EOF
 
-cat >> /etc/security/limits.conf <<-EOF
-*               soft    nofile          1000000
-*               hard    nofile          1000000
-EOF
-
-echo "ulimit -SHn 1000000" >> /etc/profile
-source /etc/profile
+cat <<EOL > /etc/security/limits.conf
+* soft nproc 655350
+* hard nproc 655350
+* soft nofile 655350
+* hard nofile 655350
+root soft nproc 655350
+root hard nproc 655350
+root soft nofile 655350
+root hard nofile 655350
+EOL
 
 sysctl -p
