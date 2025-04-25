@@ -23,7 +23,38 @@ if [ "$EUID" -ne 0 ]; then
 fi
 
 echo -e "\n${GREEN}Starting DNS configuration...${NC}"
+#!/bin/bash
 
+# Script to find and remove any DNS config files in /etc/systemd
+# except the main config file /etc/systemd/resolved.conf
+
+echo "Starting DNS configuration cleanup..."
+echo "Keeping main config: /etc/systemd/resolved.conf"
+
+# Find all files in /etc/systemd that contain 'resolved.conf' in the name
+# but exclude the main config file
+find /etc/systemd -type f -path "*/resolved.conf*" ! -path "/etc/systemd/resolved.conf" | while read -r file; do
+    echo "Found extra DNS config: $file"
+    echo "Removing: $file"
+    rm -v "$file"
+done
+
+# Specifically look for the resolved.conf.d directory and handle its contents
+if [ -d "/etc/systemd/resolved.conf.d" ]; then
+    echo "Found resolved.conf.d directory with extra configs:"
+    find /etc/systemd/resolved.conf.d -type f | while read -r file; do
+        echo "Removing: $file"
+        rm -v "$file"
+    done
+    
+    # Check if directory is now empty and remove it if it is
+    if [ -z "$(ls -A /etc/systemd/resolved.conf.d)" ]; then
+        echo "Directory /etc/systemd/resolved.conf.d is now empty, removing it."
+        rmdir -v /etc/systemd/resolved.conf.d
+    fi
+fi
+
+echo "DNS configuration cleanup completed."
 # Configure DNS settings
 setup_dns() {
   echo -e "\n${YELLOW}Step 1: Preparing system files...${NC}"
@@ -130,8 +161,177 @@ show_current_dns
 
 echo -e "\n${GREEN}DNS Configuration Complete!${NC}"
 echo -e "${BLUE}==================================================${NC}"
-echo -e "DNS servers set to: Cloudflare (1.1.1.1)"
-echo -e "                    Google    (8.8.8.8)"
+echo -e "DNS servers set to: Cloudflare (1.1.1.1, 1.0.0.1)"
+echo -e "                    Google    (8.8.8.8, 8.8.4.4)"
 echo -e "${BLUE}==================================================${NC}"
 echo -e "You can test your DNS setup with: ${YELLOW}dig example.com${NC}"
 echo -e "If you experience any issues, the backup is at: ${YELLOW}$backup_file${NC}\n"
+
+echo -n "Do you want to also clean up DNS from netplan and network/interfaces? (y/n): "
+read -r answer
+
+# Check if the answer starts with 'y' or 'Y'
+if [[ $answer =~ ^[Yy] ]]; then
+   #!/bin/bash
+
+    # Script to clean up DNS settings from Netplan configs and /etc/network/interfaces
+    # Author: Claude
+    # Date: April 26, 2025
+
+    set -e
+
+    # Function to display script usage
+    usage() {
+        echo "Usage: $0 [options]"
+        echo "Options:"
+        echo "  -b, --backup-dir DIR   Specify backup directory (default: ./backup_$(date +%Y%m%d_%H%M%S))"
+        echo "  -d, --dry-run          Show what would be changed without making changes"
+        echo "  -h, --help             Display this help message"
+        exit 1
+    }
+
+    # Process command line arguments
+    BACKUP_DIR="./backup_$(date +%Y%m%d_%H%M%S)"
+    DRY_RUN=false
+
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            -b|--backup-dir)
+                BACKUP_DIR="$2"
+                shift 2
+                ;;
+            -d|--dry-run)
+                DRY_RUN=true
+                shift
+                ;;
+            -h|--help)
+                usage
+                ;;
+            *)
+                echo "Unknown option: $1"
+                usage
+                ;;
+        esac
+    done
+
+    # Create backup directory
+    if [[ "$DRY_RUN" == "false" ]]; then
+        mkdir -p "$BACKUP_DIR"
+        echo "Created backup directory: $BACKUP_DIR"
+    fi
+
+    # Check if running as root
+    if [[ $EUID -ne 0 ]]; then
+        echo "This script must be run as root" 
+        exit 1
+    fi
+
+    echo "Starting DNS cleanup process..."
+
+    # Clean up Netplan configurations
+    echo "Processing Netplan configurations..."
+    NETPLAN_DIR="/etc/netplan"
+
+    if [[ -d "$NETPLAN_DIR" ]]; then
+        for config_file in "$NETPLAN_DIR"/*.yaml; do
+            if [[ -f "$config_file" ]]; then
+                echo "Processing $config_file"
+                
+                # Create backup of original file
+                if [[ "$DRY_RUN" == "false" ]]; then
+                    cp "$config_file" "$BACKUP_DIR/$(basename "$config_file").bak"
+                    echo "  Backup created: $BACKUP_DIR/$(basename "$config_file").bak"
+                fi
+                
+                # Process the file to remove DNS settings
+                if [[ "$DRY_RUN" == "true" ]]; then
+                    echo "  Would remove DNS settings from $config_file"
+                    # Show what would be changed
+                    sed -n '/nameservers:/,/^[^ ]/p' "$config_file" | sed '$d'
+                else
+                    # Remove nameservers section
+                    # This is complex because YAML is indentation-sensitive
+                    # First, identify if there's a nameservers section
+                    if grep -q "nameservers:" "$config_file"; then
+                        # Create a temporary file
+                        temp_file=$(mktemp)
+                        
+                        # Process the file
+                        awk 'BEGIN {in_nameservers=0; indent_level=0}
+                        /nameservers:/ {
+                            in_nameservers=1; 
+                            indent_level=length($0) - length(ltrim($0));
+                            next;
+                        }
+                        {
+                            if (in_nameservers) {
+                                # Check if we are still in the nameservers section based on indentation
+                                current_indent = length($0) - length(ltrim($0));
+                                if (current_indent <= indent_level && $0 ~ /[^ ]/) {
+                                    # We have exited the nameservers section
+                                    in_nameservers = 0;
+                                    print;
+                                }
+                                # Skip lines within nameservers section
+                            } else {
+                                print;
+                            }
+                        }
+                        
+                        # Function to remove leading spaces
+                        function ltrim(s) {
+                            sub(/^[ \t\r\n]+/, "", s);
+                            return s;
+                        }' "$config_file" > "$temp_file"
+                        
+                        # Replace the original file
+                        mv "$temp_file" "$config_file"
+                        echo "  Removed DNS settings from $config_file"
+                    else
+                        echo "  No DNS settings found in $config_file"
+                    fi
+                fi
+            fi
+        done
+    else
+        echo "Netplan directory not found. Skipping Netplan configuration cleanup."
+    fi
+
+    # Clean up /etc/network/interfaces
+    INTERFACES_FILE="/etc/network/interfaces"
+    echo "Processing $INTERFACES_FILE..."
+
+    if [[ -f "$INTERFACES_FILE" ]]; then
+        # Create backup of original file
+        if [[ "$DRY_RUN" == "false" ]]; then
+            cp "$INTERFACES_FILE" "$BACKUP_DIR/interfaces.bak"
+            echo "  Backup created: $BACKUP_DIR/interfaces.bak"
+        fi
+        
+        # Process the file to remove DNS settings
+        if [[ "$DRY_RUN" == "true" ]]; then
+            echo "  Would remove the following DNS settings from $INTERFACES_FILE:"
+            grep -n "dns-nameservers\|dns-search\|dns-domain" "$INTERFACES_FILE" || echo "  No DNS settings found"
+        else
+            # Remove dns-nameservers, dns-search, and dns-domain lines
+            sed -i.tmp '/dns-nameservers/d; /dns-search/d; /dns-domain/d' "$INTERFACES_FILE"
+            rm -f "${INTERFACES_FILE}.tmp"
+            echo "  Removed DNS settings from $INTERFACES_FILE"
+        fi
+    else
+        echo "$INTERFACES_FILE not found. Skipping interfaces cleanup."
+    fi
+
+    echo "DNS cleanup process completed."
+
+    if [[ "$DRY_RUN" == "true" ]]; then
+        echo "This was a dry run. No changes were made."
+    else
+        echo "Backups of original files were saved to $BACKUP_DIR"
+        echo "You may need to apply changes with 'netplan apply' or restart networking"
+    fi
+
+    exit 0
+else 
+    echo "exiting..."
+fi
