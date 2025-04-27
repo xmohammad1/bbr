@@ -1,6 +1,17 @@
 #!/usr/bin/env bash
 set -euo pipefail
-chattr -i /etc/resolv.conf
+# File to check
+file="/etc/resolv.conf"
+
+# Try removing immutable flag using chattr, and check if it was successful
+sudo chattr -i "$file" 2>/dev/null
+
+# Check if chattr succeeded by checking the exit status
+if [ $? -eq 0 ]; then
+    echo "File was locked, it has been unlocked."
+else
+    echo "File was not locked or chattr failed."
+fi
 # Ensure script is run as root
 if [[ $EUID -ne 0 ]]; then
   echo "This script must be run as root. Try: sudo $0"
