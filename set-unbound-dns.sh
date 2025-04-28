@@ -1,16 +1,34 @@
 #!/usr/bin/env bash
 set -euo pipefail
-# File to check
-file="/etc/resolv.conf"
-
-# Try removing immutable flag using chattr, and check if it was successful
-sudo chattr -i "$file" 2>/dev/null
 
 # Ensure script is run as root
 if [[ $EUID -ne 0 ]]; then
   echo "This script must be run as root. Try: sudo $0"
   exit 1
 fi
+
+# Check if /etc/resolv.conf exists
+if [ ! -f /etc/resolv.conf ]; then
+    echo "File /etc/resolv.conf does not exist"
+fi
+
+# Try to modify the file to test if it's immutable
+if touch /etc/resolv.conf 2>/dev/null; then
+    echo "File /etc/resolv.conf is not immutable"
+else
+    echo "File /etc/resolv.conf appears to be immutable"
+    echo "Attempting to remove immutable attribute..."
+    chattr -i /etc/resolv.conf 2>/dev/null
+    
+    # Check if we can now modify the file
+    if touch /etc/resolv.conf 2>/dev/null; then
+        echo "Successfully removed immutable attribute"
+    else
+        echo "Failed to remove immutable attribute"
+        echo "This could be due to other permissions or filesystem limitations"
+    fi
+fi
+
 
 echo "=== Installing Unbound ==="
 apt update
