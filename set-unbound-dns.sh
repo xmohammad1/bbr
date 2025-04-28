@@ -58,7 +58,6 @@ server:
     do-tcp: yes
     so-reuseport: yes
     interface: 127.0.0.1
-    interface: ::1
     port: 53
     access-control: 127.0.0.0/8 allow
     access-control: ::1 allow
