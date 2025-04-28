@@ -75,10 +75,8 @@ server:
 forward-zone:
     name: "."
     forward-first: no
-    forward-addr: 1.1.1.1
     forward-addr: 8.8.8.8
-    forward-addr: 2606:4700:4700::1111
-    forward-addr: 2001:4860:4860::8888
+    forward-addr: 1.1.1.1
 EOF
 
 echo "=== Checking Unbound configuration ==="
@@ -102,7 +100,6 @@ fi
 
 cat > /etc/resolv.conf <<'EOF'
 nameserver 127.0.0.1
-nameserver ::1
 EOF
 
 echo "=== Locking /etc/resolv.conf ==="
