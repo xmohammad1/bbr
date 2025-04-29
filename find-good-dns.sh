@@ -22,6 +22,9 @@ dns_servers=(
     # DNSPod Public DNS+ (Tencent)
     "119.29.29.29"
     "119.28.28.28"
+    # NTT
+    "129.250.35.250"
+    "129.250.35.251"
     # AliDNS (Alibaba)
     "223.5.5.5"
     "223.6.6.6"
@@ -89,6 +92,9 @@ dns_servers=(
     # dnsforge.de
     "176.9.93.198"
     "176.9.1.117"
+    # Notron
+    "199.85.126.10"
+    "199.85.127.10"
 )
 
 target_host="google.com"
