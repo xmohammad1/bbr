@@ -60,16 +60,9 @@ server:
     interface: 127.0.0.1
     port: 53
     access-control: 127.0.0.0/8 allow
-    access-control: ::1 allow
     private-address: 192.168.0.0/16
     private-address: 172.16.0.0/12
     private-address: 10.0.0.0/8
-    private-address: fd00::/8
-    private-address: fe80::/10
-
-    remote-control:
-        control-enable: yes
-        control-interface: 127.0.0.1
 
 forward-zone:
     name: "."
