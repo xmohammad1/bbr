@@ -19,6 +19,8 @@ dns_servers=(
     # Hetzner
     "185.12.64.1"
     "185.12.64.2"
+    # OVH
+    "213.186.33.99"
     # DNSPod Public DNS+ (Tencent)
     "119.29.29.29"
     "119.28.28.28"
