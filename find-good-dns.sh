@@ -121,7 +121,7 @@ extract_avg_ping() {
 
     # Fallback for simpler formats or if the above fails
     if [[ -z "$avg_ping" ]]; then
-       avg_ping=$(echo "$output" | grep 'avg' | awk -F '/' '{print $5}')
+       avg_ping=$(echo "$output" | grep 'avg' | awk -F '/' '{print $}')
     fi
 
     # Ensure it's a number (basic check)
@@ -249,8 +249,8 @@ else
         done | sort -n
     )
 
-    # Get the top 5 (or fewer if less than 5 results)
-    top_ping_results=$(echo "$sorted_ping_results" | head -n 5)
+    # Get the top 10 (or fewer if less than 10 results)
+    top_ping_results=$(echo "$sorted_ping_results" | head -n 10)
 
     rank=1
     echo "$top_ping_results" | while read -r ping dns_server; do
@@ -283,8 +283,8 @@ sorted_results=$(
     done | sort -n
 )
 
-# Get the top 5 (or fewer if less than 5 results)
-top_results=$(echo "$sorted_results" | head -n 5)
+# Get the top 10 (or fewer if less than 10 results)
+top_results=$(echo "$sorted_results" | head -n 10)
 
 rank=1
 echo "$top_results" | while read -r score dns_server; do
