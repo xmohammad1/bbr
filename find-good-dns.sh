@@ -5,7 +5,16 @@ if (( BASH_VERSINFO[0] < 4 )); then
     echo "Error: This script requires bash version 4.0 or higher for associative arrays." >&2
     exit 1
 fi
+# Initialize IPv6-only flag
+ipv6_only=false
 
+# Parse command-line arguments for --AAAA
+for arg in "$@"; do
+    if [[ "$arg" == "--AAAA" ]]; then
+        ipv6_only=true
+        break
+    fi
+done
 dns_servers=(
     # Google Public DNS
     "8.8.8.8"
@@ -191,22 +200,45 @@ for dns_ip in "${dns_servers[@]}"; do
         resolved_ip=""
         ping_cmd="ping" # Default to IPv4 ping
 
-        # Try IPv4 first
+    if $ipv6_only; then
+        # Only try AAAA records
+        current_resolved_ip=$(dig "+time=$dig_timeout" "+tries=$dig_tries" "@$dns_ip" "$target_host" AAAA +short | head -n1)
+        if [[ "$current_resolved_ip" == *":"* ]]; then
+            resolved_ip=$current_resolved_ip
+            if command -v ping6 >/dev/null 2>&1; then
+                ping_cmd="ping6"
+                echo -n "Resolved AAAA ($resolved_ip) ... "
+            else
+                echo "ping6 not found, cannot ping IPv6 address."
+                continue
+            fi
+        else
+            echo "FAILED to resolve AAAA for '$target_host'"
+            continue
+        fi
+    else
+        # Try A first, then AAAA
         current_resolved_ip=$(dig "+time=$dig_timeout" "+tries=$dig_tries" "@$dns_ip" "$target_host" A +short | head -n1)
         if [[ "$current_resolved_ip" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-             resolved_ip=$current_resolved_ip
-             echo -n "Resolved A ($resolved_ip) ... "
+            resolved_ip=$current_resolved_ip
+            echo -n "Resolved A ($resolved_ip) ... "
         else
-            # Try IPv6 if IPv4 failed or wasn't returned first
             current_resolved_ip=$(dig "+time=$dig_timeout" "+tries=$dig_tries" "@$dns_ip" "$target_host" AAAA +short | head -n1)
-            # Basic check for IPv6 format (presence of colons)
             if [[ "$current_resolved_ip" == *":"* ]]; then
-                 resolved_ip=$current_resolved_ip
-                 # Check if ping6 command exists
-                 command -v ping6 >/dev/null 2>&1 && ping_cmd="ping6"
-                 echo -n "Resolved AAAA ($resolved_ip) ... "
+                resolved_ip=$current_resolved_ip
+                if command -v ping6 >/dev/null 2>&1; then
+                    ping_cmd="ping6"
+                    echo -n "Resolved AAAA ($resolved_ip) ... "
+                else
+                    echo "ping6 not found, cannot ping IPv6 address."
+                    continue
+                fi
+            else
+                echo "FAILED to resolve '$target_host'"
+                continue
             fi
         fi
+    fi
 
         # Proceed if we got a valid-looking IP
         if [[ -n "$resolved_ip" ]]; then
