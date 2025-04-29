@@ -24,5 +24,5 @@ bash <(curl -LS https://raw.githubusercontent.com/xmohammad1/bbr/main/set-unboun
 ```
 # Find good DNS
 ```
-https://raw.githubusercontent.com/xmohammad1/bbr/refs/heads/main/find-good-dns.sh
+bash <(curl -LS https://raw.githubusercontent.com/xmohammad1/bbr/refs/heads/main/find-good-dns.sh)
 ```
