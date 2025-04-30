@@ -6,7 +6,11 @@ if [[ $EUID -ne 0 ]]; then
   echo "This script must be run as root. Try: sudo $0"
   exit 1
 fi
-
+HOST_PATH="/etc/hosts"
+if ! grep -q $(hostname) $HOST_PATH; then
+echo "127.0.1.1 $(hostname)" | sudo tee -a $HOST_PATH > /dev/null
+echo "Hosts Fixed."
+fi
 # Check if /etc/resolv.conf exists
 if [ ! -f /etc/resolv.conf ]; then
     echo "File /etc/resolv.conf does not exist"
