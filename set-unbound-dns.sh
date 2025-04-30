@@ -45,30 +45,42 @@ cores=$(
   || nproc --all 2>/dev/null \
   || grep -c '^processor' /proc/cpuinfo
 )
-
+# Ensure at least 2 cores are used
+if [ "$cores" -lt 2 ]; then
+  cores=2
+  echo "Setting cores to minimum of 2"
+else
+  echo "Using detected $cores cores"
+fi
 cat > "${CONF_FILE}" <<EOF
 server:
     num-threads: ${cores}
-    cache-max-ttl: 86400
-    cache-min-ttl: 3600
-    prefetch: yes
-    do-ip4: yes
-    do-ip6: yes
-    do-udp: yes
-    do-tcp: yes
-    so-reuseport: yes
-    interface: 127.0.0.1
-    port: 53
-    access-control: 127.0.0.0/8 allow
-    private-address: 192.168.0.0/16
-    private-address: 172.16.0.0/12
-    private-address: 10.0.0.0/8
+    msg-cache-size: 50m         # Increase message cache to 50 MB
+    rrset-cache-size: 100m      # Increase RRset cache to 100 MB
+    cache-max-ttl: 86400        # Max cache time: 24 hours
+    cache-min-ttl: 3600         # Min cache time: 1 hour
+    prefetch: yes               # Pre-fetch records before expiration
+    do-ip4: yes                 # Support IPv4
+    do-ip6: yes                 # Support IPv6
+    do-udp: yes                 # Support UDP
+    do-tcp: yes                 # Support TCP
+    so-reuseport: yes           # Reuse ports for multi-core efficiency
+    so-rcvbuf: 4m               # Socket receive buffer: 4 MB
+    so-sndbuf: 4m               # Socket send buffer: 4 MB
+    interface: 127.0.0.1        # Listen on localhost
+    port: 53                    # Standard DNS port
+    access-control: 127.0.0.0/8 allow  # Allow local queries
+    private-address: 192.168.0.0/16    # Block private ranges
+    private-address: 172.16.0.0/12     # Block private ranges
+    private-address: 10.0.0.0/8        # Block private ranges
+    serve-expired: yes          # Serve expired records
+    serve-expired-ttl: 3600     # Serve expired records for 1 hour post-expiration
 
 forward-zone:
-    name: "."
-    forward-first: no
-    forward-addr: 8.8.8.8
-    forward-addr: 1.1.1.1
+    name: "."                   # Apply to all domains
+    forward-first: no           # Always forward to specified servers
+    forward-addr: 1.0.0.1       # Cloudflare DNS
+    forward-addr: 1.1.1.1       # Cloudflare DNS
 EOF
 
 echo "=== Checking Unbound configuration ==="
