@@ -184,16 +184,6 @@ choose_dns_provider() {
   fi
 }
 
-# Fix hosts file
-HOST_PATH="/etc/hosts"
-if ! grep -q "$(hostname)" $HOST_PATH; then
-  echo -e "${BLUE}=== Fixing Hosts File ===${NC}"
-  echo "127.0.1.1 $(hostname)" | sudo tee -a $HOST_PATH > /dev/null
-  success "Hosts file fixed"
-else
-  info "Hosts file already contains hostname entry"
-fi
-
 # Check resolv.conf status
 echo -e "\n${BLUE}=== Checking /etc/resolv.conf ===${NC}"
 if [ ! -f /etc/resolv.conf ]; then
