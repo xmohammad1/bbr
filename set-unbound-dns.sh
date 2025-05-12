@@ -324,6 +324,7 @@ echo "Creating unbound configuration file..."
 cat > "${CONF_FILE}" <<EOF || error_exit "Failed to write unbound configuration"
 server:
     num-threads: ${cores}
+    so-reuseport: yes
     cache-max-ttl: 86400
     cache-min-ttl: 3600
     prefetch: yes
