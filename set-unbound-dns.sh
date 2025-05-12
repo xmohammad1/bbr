@@ -63,7 +63,15 @@ validate_ip() {
   
   return $stat
 }
-
+# Validate IPv6 address format
+validate_ipv6() {
+  local ipv6=$1
+  if [[ $ipv6 =~ ^([0-9a-fA-F]{0,4}:){1,7}[0-9a-fA-F]{0,4}$ ]]; then
+    return 0
+  else
+    return 1
+  fi
+}
 # Check network connectivity
 check_connectivity() {
   info "Checking internet connectivity..."
@@ -106,24 +114,32 @@ choose_dns_provider() {
       1)
         primary_dns="1.1.1.1"
         secondary_dns="1.0.0.1"
+        ipv6_primary_dns="2606:4700:4700::1111"
+        ipv6_secondary_dns="2606:4700:4700::1001"
         provider_name="Cloudflare"
         valid_input=true
         ;;
       2)
         primary_dns="8.8.8.8"
         secondary_dns="8.8.4.4"
+        ipv6_primary_dns="2001:4860:4860::8888"
+        ipv6_secondary_dns="2001:4860:4860::8844"
         provider_name="Google"
         valid_input=true
         ;;
       3)
         primary_dns="9.9.9.9"
         secondary_dns="149.112.112.112"
+        ipv6_primary_dns="2620:fe::fe"
+        ipv6_secondary_dns="2620:fe::9"
         provider_name="Quad9"
         valid_input=true
         ;;
       4)
         primary_dns="208.67.222.222"
         secondary_dns="208.67.220.220"
+        ipv6_primary_dns="2620:119:35::35"
+        ipv6_secondary_dns="2620:119:53::53"
         provider_name="OpenDNS"
         valid_input=true
         ;;
@@ -131,22 +147,48 @@ choose_dns_provider() {
         echo -e "\n${YELLOW}Enter custom DNS servers:${NC}"
         
         while true; do
-          read -p "Primary DNS server: " primary_dns
+          read -p "Primary DNS server (IPv4): " primary_dns
           if validate_ip "$primary_dns"; then
             break
           else
-            warning "Invalid IP address format. Please enter a valid IP address."
+            warning "Invalid IP address format. Please enter a valid IPv4 address."
           fi
         done
         
         while true; do
-          read -p "Secondary DNS server: " secondary_dns
+          read -p "Secondary DNS server (IPv4): " secondary_dns
           if validate_ip "$secondary_dns"; then
             break
           else
-            warning "Invalid IP address format. Please enter a valid IP address."
+            warning "Invalid IP address format. Please enter a valid IPv4 address."
           fi
         done
+        
+        read -p "Do you want to add IPv6 DNS servers? (y/n): " add_ipv6
+        
+        if [[ $add_ipv6 =~ ^[Yy]$ ]]; then
+          while true; do
+            read -p "Primary DNS server (IPv6, e.g. 2001:4860:4860::8888): " ipv6_primary_dns
+            if [ -z "$ipv6_primary_dns" ]; then
+              break
+            elif validate_ipv6 "$ipv6_primary_dns"; then
+              break
+            else
+              warning "Invalid IPv6 address format. Please enter a valid IPv6 address or leave blank to skip."
+            fi
+          done
+          
+          while true; do
+            read -p "Secondary DNS server (IPv6, e.g. 2001:4860:4860::8844): " ipv6_secondary_dns
+            if [ -z "$ipv6_secondary_dns" ]; then
+              break
+            elif validate_ipv6 "$ipv6_secondary_dns"; then
+              break
+            else
+              warning "Invalid IPv6 address format. Please enter a valid IPv6 address or leave blank to skip."
+            fi
+          done
+        fi
         
         provider_name="Custom"
         valid_input=true
@@ -160,7 +202,12 @@ choose_dns_provider() {
   echo -e "\n${GREEN}Selected DNS provider: ${provider_name}${NC}"
   echo -e "Primary DNS: ${primary_dns}"
   echo -e "Secondary DNS: ${secondary_dns}"
-  
+    if [ -n "$ipv6_primary_dns" ]; then
+    echo -e "Primary DNS (IPv6): ${ipv6_primary_dns}"
+  fi
+  if [ -n "$ipv6_secondary_dns" ]; then
+    echo -e "Secondary DNS (IPv6): ${ipv6_secondary_dns}"
+  fi
   # Validate DNS servers by attempting to resolve a domain
   info "Validating DNS servers..."
   if dig @"$primary_dns" google.com +timeout=3 +tries=1 +short &> /dev/null; then
@@ -277,40 +324,35 @@ echo "Creating unbound configuration file..."
 cat > "${CONF_FILE}" <<EOF || error_exit "Failed to write unbound configuration"
 server:
     num-threads: ${cores}
-    msg-cache-size: 50m         # Increase message cache to 50 MB
-    rrset-cache-size: 100m      # Increase RRset cache to 100 MB
-    cache-max-ttl: 86400        # Max cache time: 24 hours
-    cache-min-ttl: 3600         # Min cache time: 1 hour
-    prefetch: yes               # Pre-fetch records before expiration
-    do-ip4: yes                 # Support IPv4
-    do-ip6: yes                 # Support IPv6
-    do-udp: yes                 # Support UDP
-    do-tcp: yes                 # Support TCP
-    so-reuseport: yes           # Reuse ports for multi-core efficiency
-    so-rcvbuf: 4m               # Socket receive buffer: 4 MB
-    so-sndbuf: 4m               # Socket send buffer: 4 MB
-    interface: 127.0.0.1        # Listen on localhost
-    port: 53                    # Standard DNS port
-    access-control: 127.0.0.0/8 allow  # Allow local queries
-    private-address: 192.168.0.0/16    # Block private ranges
-    private-address: 172.16.0.0/12     # Block private ranges
-    private-address: 10.0.0.0/8        # Block private ranges
-    serve-expired: yes          # Serve expired records
-    serve-expired-ttl: 3600     # Serve expired records for 1 hour post-expiration
-    verbosity: 1                # Reasonable log level
-    use-syslog: yes             # Use system log
-    hide-identity: yes          # Hide server info
-    hide-version: yes           # Hide version info
-    harden-glue: yes            # Harden glue records
-    harden-dnssec-stripped: yes # DNSSEC stripping protection
-    harden-referral-path: yes   # Hardening against query poisoning
-    qname-minimisation: yes     # Minimize data sent in queries
+    cache-max-ttl: 86400
+    cache-min-ttl: 3600
+    prefetch: yes
+    do-ip4: yes
+    do-ip6: yes
+    do-udp: yes
+    do-tcp: yes
+    interface: 127.0.0.1
+    interface: ::1
+    port: 53
+    access-control: 127.0.0.0/8 allow
+    access-control: ::1 allow
+    private-address: 192.168.0.0/16
+    private-address: 172.16.0.0/12
+    private-address: 10.0.0.0/8
+    private-address: fd00::/8
+    private-address: fe80::/10
+
+    remote-control:
+        control-enable: yes
+        control-interface: 127.0.0.1
 
 forward-zone:
-    name: "."                   # Apply to all domains
-    forward-first: no           # Always forward to specified servers
-    forward-addr: ${primary_dns}       # Primary DNS
-    forward-addr: ${secondary_dns}     # Secondary DNS
+    name: "."
+    forward-first: no
+    forward-addr: ${primary_dns}
+    forward-addr: ${secondary_dns}
+    forward-addr: ${ipv6_primary_dns}
+    forward-addr: ${ipv6_secondary_dns}
 EOF
 
 echo -e "\n${BLUE}=== Checking Unbound configuration ===${NC}"
@@ -444,11 +486,23 @@ validate_ip() {
   return $stat
 }
 
+# Validate IPv6 address format
+validate_ipv6() {
+  local ipv6=$1
+  if [[ $ipv6 =~ ^([0-9a-fA-F]{0,4}:){1,7}[0-9a-fA-F]{0,4}$ ]]; then
+    return 0
+  else
+    return 1
+  fi
+}
+
 # Function to update DNS settings
 update_dns() {
   local primary_dns=$1
   local secondary_dns=$2
   local provider_name=$3
+  local ipv6_primary_dns="${4:-}"
+  local ipv6_secondary_dns="${5:-}"
   
   # Validate DNS servers
   if ! validate_ip "$primary_dns"; then
@@ -457,6 +511,14 @@ update_dns() {
   
   if ! validate_ip "$secondary_dns"; then
     error_exit "Invalid secondary DNS IP address format: $secondary_dns"
+  fi
+  
+  if [ -n "$ipv6_primary_dns" ] && ! validate_ipv6 "$ipv6_primary_dns"; then
+    error_exit "Invalid primary IPv6 DNS address format: $ipv6_primary_dns"
+  fi
+  
+  if [ -n "$ipv6_secondary_dns" ] && ! validate_ipv6 "$ipv6_secondary_dns"; then
+    error_exit "Invalid secondary IPv6 DNS address format: $ipv6_secondary_dns"
   fi
   
   # Unlock resolv.conf first
@@ -481,6 +543,19 @@ update_dns() {
     error_exit "Failed to update unbound configuration - could not add new forward-addr lines"
   fi
   
+  # Add IPv6 DNS servers if provided
+  if [ -n "$ipv6_primary_dns" ]; then
+    if ! sed -i "/forward-addr: ${secondary_dns}/a\\    forward-addr: ${ipv6_primary_dns}     # Primary IPv6 DNS" /etc/unbound/unbound.conf; then
+      error_exit "Failed to update unbound configuration - could not add primary IPv6 DNS"
+    fi
+  fi
+  
+  if [ -n "$ipv6_secondary_dns" ]; then
+    if ! sed -i "/forward-addr: ${ipv6_primary_dns:-${secondary_dns}}/a\\    forward-addr: ${ipv6_secondary_dns}     # Secondary IPv6 DNS" /etc/unbound/unbound.conf; then
+      error_exit "Failed to update unbound configuration - could not add secondary IPv6 DNS"
+    fi
+  fi
+  
   # Verify configuration
   if ! unbound-checkconf; then
     error_exit "Updated unbound configuration is invalid. Restoring from backup..."
@@ -499,8 +574,16 @@ update_dns() {
   fi
   
   success "DNS settings updated to ${provider_name}"
-  echo -e "Primary: ${primary_dns}"
-  echo -e "Secondary: ${secondary_dns}"
+  echo -e "Primary IPv4: ${primary_dns}"
+  echo -e "Secondary IPv4: ${secondary_dns}"
+  
+  if [ -n "$ipv6_primary_dns" ]; then
+    echo -e "Primary IPv6: ${ipv6_primary_dns}"
+  fi
+  
+  if [ -n "$ipv6_secondary_dns" ]; then
+    echo -e "Secondary IPv6: ${ipv6_secondary_dns}"
+  fi
   
   # Test DNS
   if dig @127.0.0.1 google.com +short +timeout=5 +tries=2 | grep -q .; then
@@ -540,39 +623,68 @@ read -p "Enter your choice [1-7]: " choice
 
 case $choice in
   1)
-    update_dns "1.1.1.1" "1.0.0.1" "Cloudflare"
+    update_dns "1.1.1.1" "1.0.0.1" "Cloudflare" "2606:4700:4700::1111" "2606:4700:4700::1001"
     ;;
   2)
-    update_dns "8.8.8.8" "8.8.4.4" "Google"
+    update_dns "8.8.8.8" "8.8.4.4" "Google" "2001:4860:4860::8888" "2001:4860:4860::8844"
     ;;
   3)
-    update_dns "9.9.9.9" "149.112.112.112" "Quad9"
+    update_dns "9.9.9.9" "149.112.112.112" "Quad9" "2620:fe::fe" "2620:fe::9"
     ;;
   4)
-    update_dns "208.67.222.222" "208.67.220.220" "OpenDNS"
+    update_dns "208.67.222.222" "208.67.220.220" "OpenDNS" "2620:119:35::35" "2620:119:53::53"
     ;;
   5)
     echo -e "\n${YELLOW}Enter custom DNS servers:${NC}"
     
     while true; do
-      read -p "Primary DNS server: " primary_dns
+      read -p "Primary DNS server (IPv4): " primary_dns
       if validate_ip "$primary_dns"; then
         break
       else
-        warning "Invalid IP address format. Please enter a valid IP address."
+        warning "Invalid IP address format. Please enter a valid IPv4 address."
       fi
     done
     
     while true; do
-      read -p "Secondary DNS server: " secondary_dns
+      read -p "Secondary DNS server (IPv4): " secondary_dns
       if validate_ip "$secondary_dns"; then
         break
       else
-        warning "Invalid IP address format. Please enter a valid IP address."
+        warning "Invalid IP address format. Please enter a valid IPv4 address."
       fi
     done
     
-    update_dns "$primary_dns" "$secondary_dns" "Custom"
+    ipv6_primary_dns=""
+    ipv6_secondary_dns=""
+    
+    read -p "Do you want to add IPv6 DNS servers? (y/n): " add_ipv6
+    
+    if [[ $add_ipv6 =~ ^[Yy]$ ]]; then
+      while true; do
+        read -p "Primary DNS server (IPv6, e.g. 2001:4860:4860::8888): " ipv6_primary_dns
+        if [ -z "$ipv6_primary_dns" ]; then
+          break
+        elif validate_ipv6 "$ipv6_primary_dns"; then
+          break
+        else
+          warning "Invalid IPv6 address format. Please enter a valid IPv6 address or leave blank to skip."
+        fi
+      done
+      
+      while true; do
+        read -p "Secondary DNS server (IPv6, e.g. 2001:4860:4860::8844): " ipv6_secondary_dns
+        if [ -z "$ipv6_secondary_dns" ]; then
+          break
+        elif validate_ipv6 "$ipv6_secondary_dns"; then
+          break
+        else
+          warning "Invalid IPv6 address format. Please enter a valid IPv6 address or leave blank to skip."
+        fi
+      done
+    fi
+    
+    update_dns "$primary_dns" "$secondary_dns" "Custom" "$ipv6_primary_dns" "$ipv6_secondary_dns"
     ;;
   6)
     echo -e "\n${BLUE}=== Checking DNS Status ===${NC}"
