@@ -416,6 +416,7 @@ fi
 # Create new resolv.conf
 if ! cat > /etc/resolv.conf <<'EOF'; then
 nameserver 127.0.0.1
+nameserver ::1
 options edns0 trust-ad
 EOF
   error_exit "Failed to create new resolv.conf file"
