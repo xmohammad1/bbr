@@ -327,14 +327,25 @@ server:
     so-reuseport: yes
     cache-max-ttl: 86400
     cache-min-ttl: 3600
+    msg-cache-size: 256m
+    rrset-cache-size: 256m
     prefetch: yes
+    prefetch-key: yes
     do-ip4: yes
     do-ip6: yes
     do-udp: yes
     do-tcp: yes
-    interface: 127.0.0.1
-    interface: ::1
+    verbosity: 0
+    log-queries: no
+    log-replies: no
+    logfile: ""
+    interface: 0.0.0.0
+    interface: ::0
     port: 53
+    dnssec-enable: no
+    dnssec-validation: no
+    serve-expired: yes
+    serve-expired-ttl: 86400
     access-control: 127.0.0.0/8 allow
     access-control: ::1 allow
     private-address: 192.168.0.0/16
@@ -343,13 +354,13 @@ server:
     private-address: fd00::/8
     private-address: fe80::/10
 
-    remote-control:
-        control-enable: yes
-        control-interface: 127.0.0.1
+    # remote-control:
+    #     control-enable: yes
+    #     control-interface: 127.0.0.1
 
 forward-zone:
     name: "."
-    forward-first: no
+    forward-first: yes
     forward-addr: ${primary_dns}
     forward-addr: ${secondary_dns}
     forward-addr: ${ipv6_primary_dns}
