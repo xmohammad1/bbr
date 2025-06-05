@@ -1,351 +1,629 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -euo pipefail
 
-# Check for bash version (associative arrays need 4.0+)
-if (( BASH_VERSINFO[0] < 4 )); then
-    echo "Error: This script requires bash version 4.0 or higher for associative arrays." >&2
-    exit 1
+# Color codes for better readability
+RED='\033[0;31m'
+GREEN='\033[38;5;34m'
+YELLOW='\033[0;33m'
+BLUE='\033[0;36m'
+NC='\033[0m' # No Color
+
+# Function to display error and exit
+error_exit() {
+  echo -e "${RED}ERROR: $1${NC}" >&2
+  exit 1
+}
+
+# Function to display warning
+warning() {
+  echo -e "${YELLOW}WARNING: $1${NC}" >&2
+}
+
+# Function to display info
+info() {
+  echo -e "${BLUE}INFO: $1${NC}"
+}
+
+# Function to display success
+success() {
+  echo -e "${GREEN}SUCCESS: $1${NC}"
+}
+
+# Check for bash version
+if ((BASH_VERSINFO[0] < 4)); then
+  error_exit "This script requires Bash version 4 or later"
 fi
-# Initialize IPv6-only flag
-ipv6_only=false
 
-# Parse command-line arguments for --AAAA
-for arg in "$@"; do
-    if [[ "$arg" == "--AAAA" ]]; then
-        ipv6_only=true
-        break
+# Check for required commands
+for cmd in dig systemctl apt unbound-control unbound-checkconf chattr; do
+  if ! command -v "$cmd" &> /dev/null; then
+    if [ "$cmd" = "apt" ]; then
+      error_exit "This script requires apt. It appears you're not using a Debian-based system."
+    elif [ "$cmd" = "chattr" ]; then
+      warning "$cmd not found. Will attempt to install necessary packages."
+    else
+      warning "$cmd not found. Will attempt to install necessary packages."
     fi
+  fi
 done
-dns_servers=(
-    # Google Public DNS
-    "8.8.8.8"
-    "8.8.4.4"
-    # Cloudflare
-    "1.1.1.1"
-    "1.0.0.1"
-    # Quad9
-    "9.9.9.9"
-    "9.9.9.10"
-    "149.112.112.112"
-    # Cisco OpenDNS
-    "208.67.222.222"
-    "208.67.220.220"
-    # DNSPod Public DNS+ (Tencent)
-    "119.29.29.29"
-    "119.28.28.28"
-    # NTT
-    "129.250.35.250"
-    "129.250.35.251"
-    # AliDNS (Alibaba)
-    "223.5.5.5"
-    "223.6.6.6"
-    # NextDNS
-    "45.90.28.167"
-    "45.90.30.167"
-    # Cisco OpenDNS Family Shield
-    "208.67.222.123"
-    "208.67.220.123"
-    # Gcore
-    "95.85.95.85"
-    "2.56.220.2"
-    # Level 3 / CenturyLink
-    "4.2.2.1"
-    "4.2.2.2"
-    "4.2.2.3"
-    "4.2.2.4"
-    "4.2.2.5"
-    "4.2.2.6"
-    "209.244.0.3"
-    "209.244.0.4"
-    # Control D
-    "76.76.2.0"
-    "76.76.10.0"
-    # Dyn DNS
-    "216.146.35.35"
-    "216.146.36.36"
-    # Yandex DNS
-    "77.88.8.8"
-    "77.88.8.1"
-    "77.88.8.88"
-    "77.88.8.2"
-    # Hurricane Electric
-    "74.82.42.42"
-    # Quad9 (Additional servers)
-    "149.112.121.10"
-    "149.112.122.10"
-    # Comodo Secure DNS
-    "8.26.56.26"
-    "8.20.247.20"
-    # Qwest/CenturyLink
-    "205.171.3.65"
-    "205.171.2.65"
-    # Verisign Public DNS
-    "64.6.64.6"
-    "64.6.65.6"
-    # Neustar Security Services (UltraDNS Public)
-    "156.154.70.1"
-    "156.154.71.1"
-    "156.154.70.5"
-    # SafeDNS
-    "195.46.39.39"
-    "195.46.39.40"
-    # dnsforge.de
-    "176.9.93.198"
-    "176.9.1.117"
-    # Notron
-    "199.85.126.10"
-    "199.85.127.10"
-)
 
-# --- NEW: Array of target hosts ---
-target_hosts_array=(
-    "google.com"
-    "cloudflare.com"
-    "instagram.com"
-)
-
-ping_count=2 # Number of pings per server per target host
-ping_timeout=1
-dig_timeout=2
-dig_tries=1
-dig_repeat=2  # How many times to measure DNS query time for averaging per target
-
-# --- Check Dependencies ---
-command -v dig >/dev/null 2>&1 || { echo >&2 "Error: 'dig' command not found. Please install dnsutils or bind-utils."; exit 1; }
-command -v ping >/dev/null 2>&1 || { echo >&2 "Error: 'ping' command not found. Usually part of iputils or similar."; exit 1; }
-command -v time >/dev/null 2>&1 || { echo >&2 "Error: 'time' command not found. Usually part of coreutils."; exit 1; }
-command -v head >/dev/null 2>&1 || { echo >&2 "Error: 'head' command not found. Usually part of coreutils."; exit 1; }
-command -v awk >/dev/null 2>&1 || { echo >&2 "Error: 'awk' command not found."; exit 1; }
-command -v sort >/dev/null 2>&1 || { echo >&2 "Error: 'sort' command not found."; exit 1; }
-command -v grep >/dev/null 2>&1 || { echo >&2 "Error: 'grep' command not found."; exit 1; }
-command -v bc >/dev/null 2>&1 || { echo >&2 "Error: 'bc' command not found. Please install bc."; exit 1; }
-
-
-# --- Storage for Results ---
-declare -A ping_results     # Key = DNS IP, Value = Average Ping Time (ms) across all targets
-declare -A query_results    # Key = DNS IP, Value = Average Query Time (ms) across all targets
-declare -A combined_results # Key = DNS IP, Value = Combined Score (weighted average) across all targets
-
-# --- Function to Extract Average Ping ---
-extract_avg_ping() {
-    local output="$1"
-    local avg_ping=$(echo "$output" | grep -oE '[=/][0-9\.]+/[0-9\.]+/[0-9\.]+/[0-9\.]+' | head -n1 | cut -d '/' -f 3)
-    if [[ -z "$avg_ping" ]]; then
-       avg_ping=$(echo "$output" | grep 'avg' | awk -F'/' '{print $5}' | awk -F' ' '{print $1}') # More generic avg attempt
-    fi
-    if [[ "$avg_ping" =~ ^[0-9]+\.?[0-9]*$ ]]; then
-        echo "$avg_ping"
-    else
-        echo ""
-    fi
+# Validate IP address format
+validate_ip() {
+  local ip=$1
+  local stat=1
+  
+  if [[ $ip =~ ^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$ ]]; then
+    OIFS=$IFS
+    IFS='.'
+    ip=($ip)
+    IFS=$OIFS
+    [[ ${ip[0]} -le 255 && ${ip[1]} -le 255 && ${ip[2]} -le 255 && ${ip[3]} -le 255 ]]
+    stat=$?
+  fi
+  
+  return $stat
 }
 
-# --- Function to Measure DNS Query Time ---
-measure_dns_query_time() {
-    local dns_ip="$1"
-    local target="$2"
-    local total_time_ms=0
-    local successful_queries=0
-
-    for ((i=1; i<=dig_repeat; i++)); do
-        local query_output=$(dig "+time=$dig_timeout" "+tries=$dig_tries" "@$dns_ip" "$target" A +stats 2>/dev/null)
-        local query_status=$?
-
-        if [[ $query_status -eq 0 ]]; then
-            local query_time=$(echo "$query_output" | grep "Query time:" | awk '{print $4}')
-            if [[ -n "$query_time" && "$query_time" =~ ^[0-9]+$ ]]; then # dig reports in ms
-                total_time_ms=$((total_time_ms + query_time))
-                ((successful_queries++))
-            fi
-        fi
-         # Add a small delay between repeated digs to the same server for the same host
-        sleep 0.1
-    done
-
-    if [[ $successful_queries -gt 0 ]]; then
-        echo $((total_time_ms / successful_queries))
-    else
-        echo ""
+# Check network connectivity
+check_connectivity() {
+  info "Checking internet connectivity..."
+  if ping -c 1 8.8.8.8 &> /dev/null; then
+    success "Internet connection is available"
+  else
+    warning "No internet connection detected. This script requires internet access to install packages and test DNS resolution."
+    read -p "Do you want to continue anyway? (y/n): " choice
+    if [[ ! $choice =~ ^[Yy]$ ]]; then
+      error_exit "Script aborted by user"
     fi
+  fi
 }
 
-# --- Main Loop ---
-echo "Testing DNS resolution speed and ping latency for multiple target hosts..."
-echo "Targets: ${target_hosts_array[*]}"
-echo "Using $ping_count pings with a ${ping_timeout}s timeout per ping per target."
-echo "Using dig with a ${dig_timeout}s timeout and ${dig_tries} tries per target."
-echo "DNS query time will be measured $dig_repeat times per server per target."
-echo "--------------------------------------------------------------------------"
+# Ensure script is run as root
+if [[ $EUID -ne 0 ]]; then
+  error_exit "This script must be run as root. Try: sudo $0"
+fi
 
-for dns_ip in "${dns_servers[@]}"; do
-    echo "Testing DNS Server: $dns_ip"
+# Check connectivity at the beginning
+check_connectivity
 
-    # Accumulators for this DNS server across all targets
-    total_query_time_for_dns_server=0
-    successful_queries_count_for_dns_server=0
-    total_ping_time_for_dns_server=0
-    successful_pings_count_for_dns_server=0
-
-    for target_host in "${target_hosts_array[@]}"; do
-        echo -n "  Target: $target_host ... "
-
-        # Measure DNS query time for this target
-        current_query_time=$(measure_dns_query_time "$dns_ip" "$target_host")
-
-        if [[ -n "$current_query_time" ]]; then
-            total_query_time_for_dns_server=$(echo "$total_query_time_for_dns_server + $current_query_time" | bc)
-            ((successful_queries_count_for_dns_server++))
-            echo -n "Query: ${current_query_time}ms ... "
-
-            resolved_ip=""
-            ping_cmd="ping" # Default to IPv4 ping
-
-            if $ipv6_only; then
-                current_resolved_ip=$(dig "+time=$dig_timeout" "+tries=$dig_tries" "@$dns_ip" "$target_host" AAAA +short | head -n1)
-                if [[ "$current_resolved_ip" == *":"* ]]; then # Basic IPv6 check
-                    resolved_ip=$current_resolved_ip
-                    if command -v ping6 >/dev/null 2>&1; then
-                        ping_cmd="ping6"
-                        echo -n "Resolved AAAA ($resolved_ip) ... "
-                    else
-                        echo "ping6 not found, cannot ping IPv6 address for $target_host."
-                        resolved_ip="" # Mark as unresolved for this target
-                    fi
-                else
-                    echo "FAILED to resolve AAAA for '$target_host'"
-                    resolved_ip=""
-                fi
-            else
-                # Try A first
-                current_resolved_ip=$(dig "+time=$dig_timeout" "+tries=$dig_tries" "@$dns_ip" "$target_host" A +short | head -n1)
-                if [[ "$current_resolved_ip" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-                    resolved_ip=$current_resolved_ip
-                    echo -n "Resolved A ($resolved_ip) ... "
-                else # Try AAAA if A failed or was not IPv4
-                    current_resolved_ip=$(dig "+time=$dig_timeout" "+tries=$dig_tries" "@$dns_ip" "$target_host" AAAA +short | head -n1)
-                    if [[ "$current_resolved_ip" == *":"* ]]; then
-                        resolved_ip=$current_resolved_ip
-                        if command -v ping6 >/dev/null 2>&1; then
-                            ping_cmd="ping6"
-                            echo -n "Resolved AAAA ($resolved_ip) ... "
-                        else
-                            echo "ping6 not found, cannot ping IPv6 address for $target_host."
-                            resolved_ip=""
-                        fi
-                    else
-                        echo "FAILED to resolve A or AAAA for '$target_host'"
-                        resolved_ip=""
-                    fi
-                fi
-            fi
-
-            if [[ -n "$resolved_ip" ]]; then
-                ping_output=$("$ping_cmd" -c "$ping_count" -W "$ping_timeout" "$resolved_ip" 2>&1)
-                ping_status=$?
-
-                if [[ $ping_status -eq 0 ]]; then
-                    avg_ping=$(extract_avg_ping "$ping_output")
-                    if [[ -n "$avg_ping" ]]; then
-                        total_ping_time_for_dns_server=$(echo "$total_ping_time_for_dns_server + $avg_ping" | bc)
-                        ((successful_pings_count_for_dns_server++))
-                        echo "Ping: ${avg_ping}ms"
-                    else
-                        echo "Ping OK, but failed to extract avg time."
-                    fi
-                else
-                    echo "Ping FAILED (Exit code: $ping_status)"
-                fi
-            fi
-        else
-            echo "DNS query FAILED or timed out for $target_host"
-        fi
-    done # End of target_host loop
-
-    # Calculate and store averages for this DNS server
-    avg_query_time_overall=""
-    avg_ping_time_overall=""
-
-    if (( successful_queries_count_for_dns_server > 0 )); then
-        avg_query_time_overall=$(echo "scale=2; $total_query_time_for_dns_server / $successful_queries_count_for_dns_server" | bc)
-        query_results["$dns_ip"]=$avg_query_time_overall
+# DNS options menu function
+choose_dns_provider() {
+  local choice
+  local valid_input=false
+  
+  echo -e "\n${BLUE}=== DNS Provider Selection ===${NC}"
+  echo -e "Please select a DNS provider to use:"
+  echo -e "1) ${GREEN}Cloudflare${NC} (1.1.1.1, 1.0.0.1)"
+  echo -e "2) ${GREEN}Google${NC} (8.8.8.8, 8.8.4.4)"
+  echo -e "3) ${GREEN}Quad9${NC} (9.9.9.9, 149.112.112.112)"
+  echo -e "4) ${GREEN}OpenDNS${NC} (208.67.222.222, 208.67.220.220)"
+  echo -e "5) ${GREEN}Custom${NC} (specify your own DNS servers)"
+  
+  while [ "$valid_input" = false ]; do
+    read -p "Enter your choice [1-5]: " choice
+    
+    case $choice in
+      1)
+        primary_dns="1.1.1.1"
+        secondary_dns="1.0.0.1"
+        provider_name="Cloudflare"
+        valid_input=true
+        ;;
+      2)
+        primary_dns="8.8.8.8"
+        secondary_dns="8.8.4.4"
+        provider_name="Google"
+        valid_input=true
+        ;;
+      3)
+        primary_dns="9.9.9.9"
+        secondary_dns="149.112.112.112"
+        provider_name="Quad9"
+        valid_input=true
+        ;;
+      4)
+        primary_dns="208.67.222.222"
+        secondary_dns="208.67.220.220"
+        provider_name="OpenDNS"
+        valid_input=true
+        ;;
+      5)
+        echo -e "\n${YELLOW}Enter custom DNS servers:${NC}"
+        
+        while true; do
+          read -p "Primary DNS server: " primary_dns
+          if validate_ip "$primary_dns"; then
+            break
+          else
+            warning "Invalid IP address format. Please enter a valid IP address."
+          fi
+        done
+        
+        while true; do
+          read -p "Secondary DNS server: " secondary_dns
+          if validate_ip "$secondary_dns"; then
+            break
+          else
+            warning "Invalid IP address format. Please enter a valid IP address."
+          fi
+        done
+        
+        provider_name="Custom"
+        valid_input=true
+        ;;
+      *)
+        warning "Invalid choice. Please enter a number between 1 and 5."
+        ;;
+    esac
+  done
+  
+  echo -e "\n${GREEN}Selected DNS provider: ${provider_name}${NC}"
+  echo -e "Primary DNS: ${primary_dns}"
+  echo -e "Secondary DNS: ${secondary_dns}"
+  
+  # Validate DNS servers by attempting to resolve a domain
+  info "Validating DNS servers..."
+  if dig @"$primary_dns" google.com +timeout=3 +tries=1 +short &> /dev/null; then
+    success "Primary DNS server is responsive"
+  else
+    warning "Primary DNS server ($primary_dns) appears to be unresponsive or blocked"
+    read -p "Continue anyway? (y/n): " continue_choice
+    if [[ ! $continue_choice =~ ^[Yy]$ ]]; then
+      error_exit "Script aborted by user"
     fi
-
-    if (( successful_pings_count_for_dns_server > 0 )); then
-        avg_ping_time_overall=$(echo "scale=2; $total_ping_time_for_dns_server / $successful_pings_count_for_dns_server" | bc)
-        ping_results["$dns_ip"]=$avg_ping_time_overall
+  fi
+  
+  if dig @"$secondary_dns" google.com +timeout=3 +tries=1 +short &> /dev/null; then
+    success "Secondary DNS server is responsive"
+  else
+    warning "Secondary DNS server ($secondary_dns) appears to be unresponsive or blocked"
+    read -p "Continue anyway? (y/n): " continue_choice
+    if [[ ! $continue_choice =~ ^[Yy]$ ]]; then
+      error_exit "Script aborted by user"
     fi
+  fi
+}
 
-    echo -n "  Summary for $dns_ip: "
-    if [[ -n "$avg_query_time_overall" && -n "$avg_ping_time_overall" ]]; then
-        combined_score=$(echo "scale=2; (1 * $avg_query_time_overall) + (1 * $avg_ping_time_overall)" | bc)
-        combined_results["$dns_ip"]=$combined_score
-        echo "Avg Query: ${avg_query_time_overall}ms, Avg Ping: ${avg_ping_time_overall}ms, Combined: ${combined_score}"
-    elif [[ -n "$avg_query_time_overall" ]]; then
-        echo "Avg Query: ${avg_query_time_overall}ms (Pings failed or insufficient data for all targets)"
-    elif [[ -n "$avg_ping_time_overall" ]]; then
-        echo "Avg Ping: ${avg_ping_time_overall}ms (Queries failed or insufficient data for all targets)"
-    else
-        echo "All tests failed (query/ping) for all targets."
-    fi
-    echo "--------------------------------------------------------------------------"
-done # End of dns_ip loop
+# Check resolv.conf status
+echo -e "\n${BLUE}=== Checking /etc/resolv.conf ===${NC}"
+if [ ! -f /etc/resolv.conf ]; then
+  warning "File /etc/resolv.conf does not exist. Creating it..."
+  touch /etc/resolv.conf || error_exit "Failed to create /etc/resolv.conf"
+fi
 
-echo "Processing results..."
 
-# --- Sort and Print Results Based on Ping Only ---
-num_ping_results=${#ping_results[@]}
-
-if [[ $num_ping_results -eq 0 ]]; then
-    echo "No successful average ping results were recorded."
+# Try to modify the file to test if it's immutable
+if touch /etc/resolv.conf 2>/dev/null; then
+  info "File /etc/resolv.conf is not immutable"
 else
-    echo "Found $num_ping_results DNS servers with successful average ping result(s)."
-    echo "Top performers by Average Ping time only (DNS Server -> Avg Ping Time):"
-
-    sorted_ping_results=$(
-        for dns in "${!ping_results[@]}"; do
-            echo "${ping_results[$dns]} $dns"
-        done | sort -n
-    )
-
-    top_ping_results=$(echo "$sorted_ping_results" | head -n 10)
-    rank=1
-    echo "$top_ping_results" | while read -r ping dns_server; do
-        if [[ -n "$ping" ]]; then
-           query="${query_results[$dns_server]:-N/A}" # Display N/A if query data is missing
-           printf "%d. %s (Avg Ping: %sms, Avg Query: %sms)\n" "$rank" "$dns_server" "$ping" "$query"
-           ((rank++))
-        fi
-    done
+  warning "File /etc/resolv.conf appears to be immutable"
+  echo "Attempting to remove immutable attribute..."
+  if ! chattr -i /etc/resolv.conf 2>/dev/null; then
+    warning "Failed to remove immutable attribute with chattr"
+    if ! lsattr /etc/resolv.conf &>/dev/null; then
+      warning "lsattr command not available, filesystem may not support immutable attributes"
+    else
+      attributes=$(lsattr /etc/resolv.conf 2>/dev/null)
+      if [[ $attributes == *"i"* ]]; then
+        error_exit "File is immutable and cannot be modified. Please check your filesystem permissions."
+      fi
+    fi
+  else
+    # Check if we can now modify the file
+    if touch /etc/resolv.conf 2>/dev/null; then
+      success "Successfully removed immutable attribute"
+    else
+      error_exit "Failed to modify resolv.conf after removing immutable attribute. Check file permissions."
+    fi
+  fi
 fi
 
-echo "--------------------------------------------------------------------------"
+# Ask for DNS provider
+choose_dns_provider
 
-# --- Sort and Print Results Based on Combined Score ---
-num_results=${#combined_results[@]}
-
-if [[ $num_results -eq 0 ]]; then
-    echo "No successful combined results were recorded (need both query and ping data)."
-    exit 0
+# Check if systemd-resolved is installed
+echo -e "\n${BLUE}=== Checking for systemd-resolved ===${NC}"
+if systemctl list-unit-files systemd-resolved.service &> /dev/null; then
+  info "systemd-resolved is installed"
+else
+  info "systemd-resolved is not installed or not using systemd"
 fi
 
-echo "Found $num_results DNS servers with successful combined result(s)."
-echo "Top performers by Combined Score (DNS Server -> Combined Score [Avg Query + Avg Ping]):"
+# Installation 
+echo -e "\n${BLUE}=== Installing Unbound ===${NC}"
+apt update || error_exit "Failed to update package repositories"
+if ! DEBIAN_FRONTEND=noninteractive apt install -y unbound; then
+  error_exit "Failed to install unbound package"
+fi
 
-sorted_results=$(
-    for dns in "${!combined_results[@]}"; do
-        echo "${combined_results[$dns]} $dns"
-    done | sort -n
+echo -e "\n${BLUE}=== Setting up Unbound control keys ===${NC}"
+if ! unbound-control-setup; then
+  warning "Failed to set up unbound control keys. Continuing anyway."
+fi
+
+echo -e "\n${BLUE}=== Writing custom Unbound config ===${NC}"
+CONF_DIR="/etc/unbound"
+CONF_FILE="${CONF_DIR}/unbound.conf"
+
+# Backup existing config
+if [ -f "${CONF_FILE}" ]; then
+  cp "${CONF_FILE}" "${CONF_FILE}.backup.$(date +%Y%m%d%H%M%S)"
+  success "Created backup of unbound configuration"
+fi
+
+# Determine number of CPU cores
+cores=$(
+  getconf _NPROCESSORS_ONLN 2>/dev/null \
+  || nproc --all 2>/dev/null \
+  || grep -c '^processor' /proc/cpuinfo \
+  || echo 2
 )
 
-top_results=$(echo "$sorted_results" | head -n 10)
-rank=1
-echo "$top_results" | while read -r score dns_server; do
-    if [[ -n "$score" ]]; then
-       query="${query_results[$dns_server]}"
-       ping="${ping_results[$dns_server]}"
-       printf "%d. %s (Avg Query: %sms, Avg Ping: %sms, Combined: %s)\n" "$rank" "$dns_server" "$query" "$ping" "$score"
-       ((rank++))
-    fi
-done
+# Ensure at least 2 cores are used
+if [ "$cores" -lt 2 ]; then
+  cores=2
+  info "Setting cores to minimum of 2"
+else
+  info "Using detected $cores cores"
+fi
 
-echo "--------------------------------------------------------------------------"
-echo "DNS test complete."
+# Create Unbound configuration directory if it doesn't exist
+if [ ! -d "${CONF_DIR}" ]; then
+  mkdir -p "${CONF_DIR}" || error_exit "Failed to create unbound configuration directory"
+fi
+
+# Write Unbound configuration
+echo "Creating unbound configuration file..."
+cat > "${CONF_FILE}" <<EOF || error_exit "Failed to write unbound configuration"
+server:
+    num-threads: ${cores}
+    msg-cache-size: 50m         # Increase message cache to 50 MB
+    rrset-cache-size: 100m      # Increase RRset cache to 100 MB
+    cache-max-ttl: 86400        # Max cache time: 24 hours
+    cache-min-ttl: 3600         # Min cache time: 1 hour
+    prefetch: yes               # Pre-fetch records before expiration
+    do-ip4: yes                 # Support IPv4
+    do-ip6: yes                 # Support IPv6
+    do-udp: yes                 # Support UDP
+    do-tcp: yes                 # Support TCP
+    so-reuseport: yes           # Reuse ports for multi-core efficiency
+    so-rcvbuf: 4m               # Socket receive buffer: 4 MB
+    so-sndbuf: 4m               # Socket send buffer: 4 MB
+    interface: 127.0.0.1        # Listen on localhost
+    port: 53                    # Standard DNS port
+    access-control: 127.0.0.0/8 allow  # Allow local queries
+    private-address: 192.168.0.0/16    # Block private ranges
+    private-address: 172.16.0.0/12     # Block private ranges
+    private-address: 10.0.0.0/8        # Block private ranges
+    serve-expired: yes          # Serve expired records
+    serve-expired-ttl: 3600     # Serve expired records for 1 hour post-expiration
+    verbosity: 1                # Reasonable log level
+    use-syslog: yes             # Use system log
+    hide-identity: yes          # Hide server info
+    hide-version: yes           # Hide version info
+    harden-glue: yes            # Harden glue records
+    harden-dnssec-stripped: yes # DNSSEC stripping protection
+    harden-referral-path: yes   # Hardening against query poisoning
+    qname-minimisation: yes     # Minimize data sent in queries
+
+forward-zone:
+    name: "."                   # Apply to all domains
+    forward-first: no           # Always forward to specified servers
+    forward-addr: ${primary_dns}       # Primary DNS
+    forward-addr: ${secondary_dns}     # Secondary DNS
+EOF
+
+echo -e "\n${BLUE}=== Checking Unbound configuration ===${NC}"
+if ! unbound-checkconf; then
+  error_exit "Unbound configuration check failed. Please check the error messages above."
+fi
+
+echo -e "\n${BLUE}=== Restarting Unbound ===${NC}"
+if ! systemctl restart unbound; then
+  error_exit "Failed to restart unbound service. Check service status with: systemctl status unbound"
+fi
+
+# Check if unbound service is running
+if ! systemctl is-active --quiet unbound; then
+  error_exit "Unbound service is not running after restart"
+fi
+
+echo -e "\n${BLUE}=== Testing DNS ===${NC}"
+s=${1:-127.0.0.1}; d=${2:-google.com}
+if dig @"$s" "$d" +short +timeout=5 +tries=2 | grep -q .; then
+  success "DNS resolution test successful"
+else
+  warning "DNS resolution test failed. This might indicate an issue with Unbound configuration."
+  read -p "Continue with disabling systemd-resolved? (y/n): " continue_choice
+  if [[ ! $continue_choice =~ ^[Yy]$ ]]; then
+    error_exit "Script aborted by user"
+  fi
+fi
+
+echo -e "\n${BLUE}=== Stopping and disabling systemd-resolved ===${NC}"
+if systemctl list-unit-files systemd-resolved.service &> /dev/null; then
+  if systemctl stop systemd-resolved; then
+    info "systemd-resolved stopped"
+  else
+    warning "Failed to stop systemd-resolved"
+  fi
+  
+  if systemctl disable systemd-resolved; then
+    success "systemd-resolved disabled"
+  else
+    warning "Failed to disable systemd-resolved"
+  fi
+else
+  info "systemd-resolved is not installed or not using systemd. Skipping."
+fi
+
+echo -e "\n${BLUE}=== Replacing /etc/resolv.conf ===${NC}"
+# Remove immutable attribute if it exists
+if ! chattr -i /etc/resolv.conf 2>/dev/null; then
+  warning "Failed to remove immutable flag from /etc/resolv.conf or flag doesn't exist"
+fi
+
+# Remove existing resolv.conf if it's a symlink or file
+if [ -L /etc/resolv.conf ] || [ -f /etc/resolv.conf ]; then
+  if ! rm -f /etc/resolv.conf; then
+    error_exit "Failed to remove existing resolv.conf file"
+  fi
+fi
+
+# Create new resolv.conf
+if ! cat > /etc/resolv.conf <<'EOF'; then
+nameserver 127.0.0.1
+options edns0 trust-ad
+EOF
+  error_exit "Failed to create new resolv.conf file"
+fi
+
+echo -e "\n${BLUE}=== Locking /etc/resolv.conf ===${NC}"
+if ! chattr +i /etc/resolv.conf 2>/dev/null; then
+  warning "Failed to set immutable flag on /etc/resolv.conf"
+  info "Your resolv.conf file may be overwritten by the system. You might need to manually prevent this."
+else
+  success "resolv.conf has been protected with the immutable attribute"
+fi
+
+# Add DNS management function
+add_dns_management_script() {
+  echo -e "\n${BLUE}=== Creating DNS Management Script ===${NC}"
+  
+  cat > /usr/local/bin/manage-dns <<'EOFSCRIPT' || error_exit "Failed to create DNS management script"
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Color codes
+RED='\033[0;31m'
+GREEN='\033[38;5;34m'
+YELLOW='\033[0;33m'
+BLUE='\033[0;36m'
+NC='\033[0m' # No Color
+
+# Function to display error and exit
+error_exit() {
+  echo -e "${RED}ERROR: $1${NC}" >&2
+  exit 1
+}
+
+# Function to display warning
+warning() {
+  echo -e "${YELLOW}WARNING: $1${NC}" >&2
+}
+
+# Function to display info
+info() {
+  echo -e "${BLUE}INFO: $1${NC}"
+}
+
+# Function to display success
+success() {
+  echo -e "${GREEN}SUCCESS: $1${NC}"
+}
+
+# Check if running as root
+if [[ $EUID -ne 0 ]]; then
+  error_exit "This script must be run as root. Try: sudo $0"
+fi
+
+# Validate IP address format
+validate_ip() {
+  local ip=$1
+  local stat=1
+  
+  if [[ $ip =~ ^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$ ]]; then
+    OIFS=$IFS
+    IFS='.'
+    ip=($ip)
+    IFS=$OIFS
+    [[ ${ip[0]} -le 255 && ${ip[1]} -le 255 && ${ip[2]} -le 255 && ${ip[3]} -le 255 ]]
+    stat=$?
+  fi
+  
+  return $stat
+}
+
+# Function to update DNS settings
+update_dns() {
+  local primary_dns=$1
+  local secondary_dns=$2
+  local provider_name=$3
+  
+  # Validate DNS servers
+  if ! validate_ip "$primary_dns"; then
+    error_exit "Invalid primary DNS IP address format: $primary_dns"
+  fi
+  
+  if ! validate_ip "$secondary_dns"; then
+    error_exit "Invalid secondary DNS IP address format: $secondary_dns"
+  fi
+  
+  # Unlock resolv.conf first
+  if ! chattr -i /etc/resolv.conf 2>/dev/null; then
+    warning "Failed to remove immutable flag from /etc/resolv.conf or flag doesn't exist"
+  fi
+  
+  # Check if unbound.conf exists
+  if [ ! -f /etc/unbound/unbound.conf ]; then
+    error_exit "Unbound configuration file not found. Is Unbound installed?"
+  fi
+  
+  # Create backup of unbound.conf
+  cp /etc/unbound/unbound.conf /etc/unbound/unbound.conf.backup.$(date +%Y%m%d%H%M%S) || warning "Failed to create backup of unbound.conf"
+  
+  # Update unbound configuration
+  if ! sed -i "/forward-addr:/d" /etc/unbound/unbound.conf; then
+    error_exit "Failed to update unbound configuration - could not remove existing forward-addr lines"
+  fi
+  
+  if ! sed -i "/forward-first:/a\\    forward-addr: ${primary_dns}       # Primary DNS\\n    forward-addr: ${secondary_dns}     # Secondary DNS" /etc/unbound/unbound.conf; then
+    error_exit "Failed to update unbound configuration - could not add new forward-addr lines"
+  fi
+  
+  # Verify configuration
+  if ! unbound-checkconf; then
+    error_exit "Updated unbound configuration is invalid. Restoring from backup..."
+    cp /etc/unbound/unbound.conf.backup.* /etc/unbound/unbound.conf
+    error_exit "Configuration restored from backup, but DNS update failed."
+  fi
+  
+  # Restart unbound
+  if ! systemctl restart unbound; then
+    error_exit "Failed to restart unbound service"
+  fi
+  
+  # Lock resolv.conf again
+  if ! chattr +i /etc/resolv.conf 2>/dev/null; then
+    warning "Failed to set immutable flag on /etc/resolv.conf"
+  fi
+  
+  success "DNS settings updated to ${provider_name}"
+  echo -e "Primary: ${primary_dns}"
+  echo -e "Secondary: ${secondary_dns}"
+  
+  # Test DNS
+  if dig @127.0.0.1 google.com +short +timeout=5 +tries=2 | grep -q .; then
+    success "DNS test successful ✅"
+  else
+    warning "DNS test failed ❌ - Check your unbound configuration and network connectivity"
+  fi
+}
+
+# Function to show current DNS settings
+show_current_dns() {
+  echo -e "${BLUE}Current DNS settings:${NC}"
+  if [ -f /etc/unbound/unbound.conf ]; then
+    grep "forward-addr:" /etc/unbound/unbound.conf | sed 's/^[ \t]*//' || echo "No forward-addr entries found in unbound.conf"
+  else
+    echo "Unbound configuration file not found"
+  fi
+  
+  echo -e "\n${BLUE}Current resolv.conf:${NC}"
+  cat /etc/resolv.conf
+}
+
+# Menu
+echo -e "${BLUE}===== DNS Management Tool =====${NC}"
+show_current_dns
+
+echo -e "\nChoose an option:"
+echo -e "1) ${GREEN}Cloudflare${NC} (1.1.1.1, 1.0.0.1)"
+echo -e "2) ${GREEN}Google${NC} (8.8.8.8, 8.8.4.4)"
+echo -e "3) ${GREEN}Quad9${NC} (9.9.9.9, 149.112.112.112)"
+echo -e "4) ${GREEN}OpenDNS${NC} (208.67.222.222, 208.67.220.220)"
+echo -e "5) ${GREEN}Custom${NC} (specify your own DNS servers)"
+echo -e "6) ${GREEN}Check DNS Status${NC}"
+echo -e "7) ${YELLOW}Exit${NC}"
+
+read -p "Enter your choice [1-7]: " choice
+
+case $choice in
+  1)
+    update_dns "1.1.1.1" "1.0.0.1" "Cloudflare"
+    ;;
+  2)
+    update_dns "8.8.8.8" "8.8.4.4" "Google"
+    ;;
+  3)
+    update_dns "9.9.9.9" "149.112.112.112" "Quad9"
+    ;;
+  4)
+    update_dns "208.67.222.222" "208.67.220.220" "OpenDNS"
+    ;;
+  5)
+    echo -e "\n${YELLOW}Enter custom DNS servers:${NC}"
+    
+    while true; do
+      read -p "Primary DNS server: " primary_dns
+      if validate_ip "$primary_dns"; then
+        break
+      else
+        warning "Invalid IP address format. Please enter a valid IP address."
+      fi
+    done
+    
+    while true; do
+      read -p "Secondary DNS server: " secondary_dns
+      if validate_ip "$secondary_dns"; then
+        break
+      else
+        warning "Invalid IP address format. Please enter a valid IP address."
+      fi
+    done
+    
+    update_dns "$primary_dns" "$secondary_dns" "Custom"
+    ;;
+  6)
+    echo -e "\n${BLUE}=== Checking DNS Status ===${NC}"
+    show_current_dns
+    
+    echo -e "\n${BLUE}DNS Resolution Test:${NC}"
+    if dig @127.0.0.1 google.com +short +timeout=5 +tries=2 | grep -q .; then
+      success "DNS resolution is working properly ✅"
+    else
+      warning "DNS resolution test failed ❌"
+    fi
+    
+    echo -e "\n${BLUE}Unbound Service Status:${NC}"
+    systemctl status unbound --no-pager || warning "Could not get unbound service status"
+    ;;
+  7)
+    echo -e "${YELLOW}Exiting...${NC}"
+    exit 0
+    ;;
+  *)
+    error_exit "Invalid choice. Exiting."
+    ;;
+esac
+EOFSCRIPT
+
+  chmod +x /usr/local/bin/manage-dns || error_exit "Failed to make DNS management script executable"
+  success "DNS management script created at /usr/local/bin/manage-dns"
+  info "You can change DNS settings anytime by running: sudo manage-dns"
+}
+
+# Create DNS management script
+add_dns_management_script
+
+echo -e "\n${GREEN}=== DNS Setup Complete! ===${NC}"
+echo -e "Your system is now using ${provider_name} DNS servers through Unbound"
+echo -e "${YELLOW}To change DNS providers later, run: sudo manage-dns${NC}"
+
+# Final verification
+echo -e "\n${BLUE}=== Final Verification ===${NC}"
+if dig @127.0.0.1 google.com +short +timeout=5 +tries=2 | grep -q .; then
+  success "DNS resolution check: PASS"
+else
+  warning "DNS resolution check: FAIL - Some resolvers may be blocked in your network"
+  warning "Try changing DNS providers using: sudo manage-dns"
+fi
+
+if systemctl is-active --quiet unbound; then
+  success "Unbound service status: ACTIVE"
+else
+  warning "Unbound service status: NOT ACTIVE"
+  warning "Try starting the service manually: sudo systemctl start unbound"
+fi
+
+echo -e "\n${GREEN}Setup process completed${NC}"
