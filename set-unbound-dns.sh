@@ -323,11 +323,25 @@ fi
 echo "Creating unbound configuration file..."
 cat > "${CONF_FILE}" <<EOF || error_exit "Failed to write unbound configuration"
 server:
-    num-threads: ${cores}
-    so-reuseport: yes
-    cache-max-ttl: 86400
-    cache-min-ttl: 3600
-    prefetch: yes
+    num-threads: ${cores}               
+    so-reuseport: yes                 
+    msg-cache-size: 256m              
+    rrset-cache-size: 512m            
+    outgoing-range: 8192              
+    num-queries-per-thread: 4096      
+    so-rcvbuf: 4m                     
+    so-sndbuf: 4m                     
+    edns-buffer-size: 1232            
+    minimal-responses: yes            
+    rrset-roundrobin: yes             
+    cache-max-ttl: 86400              
+    cache-min-ttl: 3600               
+    prefetch: yes                     
+    prefetch-key: yes                 
+    serve-expired: yes                
+    serve-expired-ttl: 3600           
+    serve-expired-reply-ttl: 30       
+    serve-expired-client-timeout: 100 
     do-ip4: yes
     do-ip6: yes
     do-udp: yes
@@ -337,23 +351,31 @@ server:
     port: 53
     access-control: 127.0.0.0/8 allow
     access-control: ::1 allow
+    hide-identity: yes
+    hide-version: yes
     private-address: 192.168.0.0/16
     private-address: 172.16.0.0/12
     private-address: 10.0.0.0/8
     private-address: fd00::/8
     private-address: fe80::/10
-
+    harden-dnssec-stripped: no        
+    harden-glue: no                   
+    harden-below-nxdomain: no         
+    val-clean-additional: no          
+    use-caps-for-id: no               
+    verbosity: 0                      
+    log-local-actions: no
+    log-servfail: no                  
     remote-control:
         control-enable: yes
         control-interface: 127.0.0.1
-
 forward-zone:
     name: "."
-    forward-first: no
+    forward-first: yes                
     forward-addr: ${primary_dns}
     forward-addr: ${secondary_dns}
-    forward-addr: ${ipv6_primary_dns}
-    forward-addr: ${ipv6_secondary_dns}
+    forward-addr: ${ipv6_primary_dns} 
+    forward-addr: ${ipv6_secondary_dns} 
 EOF
 
 echo -e "\n${BLUE}=== Checking Unbound configuration ===${NC}"
@@ -417,7 +439,7 @@ fi
 if ! cat > /etc/resolv.conf <<'EOF'; then
 nameserver 127.0.0.1
 nameserver ::1
-options edns0 trust-ad
+options edns0
 EOF
   error_exit "Failed to create new resolv.conf file"
 fi
