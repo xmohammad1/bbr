@@ -342,8 +342,8 @@ server:
     interface: 0.0.0.0
     interface: ::0
     port: 53
-    dnssec-enable: no
-    dnssec-validation: no
+    # dnssec-enable: no
+    # dnssec-validation: no
     serve-expired: yes
     serve-expired-ttl: 86400
     access-control: 127.0.0.0/8 allow
