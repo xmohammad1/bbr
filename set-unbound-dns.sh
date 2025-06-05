@@ -326,7 +326,7 @@ server:
     num-threads: ${cores}
     so-reuseport: yes
     cache-max-ttl: 86400
-    cache-min-ttl: 3600
+    cache-min-ttl: 0
     msg-cache-size: 256m
     rrset-cache-size: 256m
     prefetch: yes
@@ -342,8 +342,7 @@ server:
     interface: 0.0.0.0
     interface: ::0
     port: 53
-    # dnssec-enable: no
-    # dnssec-validation: no
+    module-config: "iterator"
     serve-expired: yes
     serve-expired-ttl: 86400
     access-control: 127.0.0.0/8 allow
