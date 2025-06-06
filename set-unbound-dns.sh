@@ -339,8 +339,8 @@ server:
     log-queries: no
     log-replies: no
     logfile: ""
-    interface: 0.0.0.0
-    interface: ::0
+    interface: 127.0.0.1
+    interface: ::1
     port: 53
     module-config: "iterator"
     serve-expired: yes
