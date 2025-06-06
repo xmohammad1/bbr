@@ -345,7 +345,7 @@ server:
     module-config: "iterator"
     serve-expired: yes
     serve-expired-ttl: 86400
-    serve-expired-client-timeout: 5
+    serve-expired-client-timeout: 500
     access-control: 127.0.0.0/8 allow
     access-control: ::1 allow
     private-address: 192.168.0.0/16
