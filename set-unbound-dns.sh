@@ -354,10 +354,6 @@ server:
     private-address: fd00::/8
     private-address: fe80::/10
 
-    # remote-control:
-    #     control-enable: yes
-    #     control-interface: 127.0.0.1
-
 forward-zone:
     name: "."
     forward-first: yes
