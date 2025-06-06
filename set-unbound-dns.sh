@@ -327,8 +327,8 @@ server:
     so-reuseport: yes
     cache-max-ttl: 86400
     cache-min-ttl: 300
-    msg-cache-size: 256m
-    rrset-cache-size: 256m
+    msg-cache-size: 512m
+    rrset-cache-size: 512m
     prefetch: yes
     prefetch-key: yes
     do-ip4: yes
