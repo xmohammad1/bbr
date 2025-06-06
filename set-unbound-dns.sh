@@ -326,7 +326,7 @@ server:
     num-threads: ${cores}
     so-reuseport: yes
     cache-max-ttl: 86400
-    cache-min-ttl: 0
+    cache-min-ttl: 300
     msg-cache-size: 256m
     rrset-cache-size: 256m
     prefetch: yes
