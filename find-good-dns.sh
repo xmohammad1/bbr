@@ -80,7 +80,6 @@ dns_servers=(
 # --- NEW: Array of target hosts ---
 target_hosts_array=(
     "google.com"
-    "cloudflare.com"
     "instagram.com"
 )
 
