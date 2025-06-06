@@ -330,7 +330,6 @@ server:
     msg-cache-size: 512m
     rrset-cache-size: 512m
     prefetch: yes
-    prefetch-key: yes
     do-ip4: yes
     do-ip6: yes
     do-udp: yes
