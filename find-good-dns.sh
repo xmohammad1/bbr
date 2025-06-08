@@ -81,6 +81,7 @@ dns_servers=(
 target_hosts_array=(
     "google.com"
     "instagram.com"
+    "www.gstatic.com"
 )
 
 ping_count=2 # Number of pings per server per target host
