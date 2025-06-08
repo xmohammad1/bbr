@@ -342,10 +342,10 @@ server:
     interface: 127.0.0.1
     interface: ::1
     port: 53
+    module-config: "iterator"
     serve-expired: yes
     serve-expired-ttl: 86400
     serve-expired-client-timeout: 0
-    serve-expired-reply-ttl: 30
     access-control: 127.0.0.0/8 allow
     access-control: ::1 allow
     private-address: 192.168.0.0/16
