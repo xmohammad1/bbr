@@ -339,9 +339,6 @@ server:
     log-queries: no
     log-replies: no
     logfile: ""
-    harden-dnssec-stripped: no
-    harden-below-nxdomain: no
-    val-clean-additional: no
     interface: 127.0.0.1
     interface: ::1
     port: 53
