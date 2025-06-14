@@ -28,5 +28,5 @@ bash <(curl -LS https://raw.githubusercontent.com/xmohammad1/bbr/refs/heads/main
 ```
 # hawshemi test
 ```
-bash <(curl -LS https://raw.githubusercontent.com/xmohammad1/bbr/main/hawshemi_test.sh)
+bash <(curl -LS https://raw.githubusercontent.com/xmohammad1/bbr/main/haeshemi_test.sh)
 ```
