@@ -26,3 +26,7 @@ bash <(curl -LS https://raw.githubusercontent.com/xmohammad1/bbr/main/set-unboun
 ```
 bash <(curl -LS https://raw.githubusercontent.com/xmohammad1/bbr/refs/heads/main/find-good-dns.sh) --AAAA
 ```
+# hawshemi test
+```
+bash <(curl -LS https://raw.githubusercontent.com/xmohammad1/bbr/main/hawshemi_test.sh)
+```
