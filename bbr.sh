@@ -5,7 +5,7 @@ echo "127.0.1.1 $(hostname)" | sudo tee -a $HOST_PATH > /dev/null
 echo "Hosts Fixed."
 fi
 Sysctl_file="/etc/sysctl.conf"
-bash <(curl -LS https://raw.githubusercontent.com/hiddify/Hiddify-Manager/main/common/google-bbr.sh)
+
 cat >> $Sysctl_file <<EOF
 # Common settings
 fs.file-max = 200000
@@ -29,8 +29,8 @@ net.ipv4.tcp_rmem = 4096 65536 67108864
 net.ipv4.tcp_wmem = 4096 65536 67108864
 net.ipv4.tcp_mtu_probing = 1
 
-# net.core.default_qdisc=fq
-# net.ipv4.tcp_congestion_control=bbr
+net.core.default_qdisc=fq
+net.ipv4.tcp_congestion_control=bbr
 
 # Additional settings
 net.ipv4.ip_forward = 1
