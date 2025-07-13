@@ -8,6 +8,11 @@ YELLOW='\033[0;33m'
 BLUE='\033[0;36m'
 NC='\033[0m' # No Color
 
+# Initialize optional DNS variables to avoid unbound errors when IPv6
+# addresses are not provided.
+ipv6_primary_dns=""
+ipv6_secondary_dns=""
+
 # Function to display error and exit
 error_exit() {
   echo -e "${RED}ERROR: $1${NC}" >&2
