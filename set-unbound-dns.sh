@@ -466,9 +466,13 @@ if [ -L /etc/resolv.conf ] || [ -f /etc/resolv.conf ]; then
 fi
 
 # Create new resolv.conf
+# The group command can return a non-zero status when either IPv4 or IPv6
+# output is skipped. Add a trailing `true` to force a zero exit status so the
+# redirection succeeds regardless of the selected mode.
 if ! {
   [ "$enable_ipv4" = "yes" ] && echo "nameserver 127.0.0.1"
   [ "$enable_ipv6" = "yes" ] && echo "nameserver ::1"
+  true
 } > /etc/resolv.conf; then
   error_exit "Failed to create new resolv.conf file"
 fi
