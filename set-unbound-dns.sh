@@ -380,19 +380,19 @@ server:
     harden-below-nxdomain: no
     val-clean-additional: no
     interface: 127.0.0.1
-    interface: ::1
+$( [ "$enable_ipv6" = "yes" ] && echo "    interface: ::1" )
     port: 53
     module-config: "iterator"
     serve-expired: yes
     serve-expired-ttl: 86400
     serve-expired-client-timeout: 0
     access-control: 127.0.0.0/8 allow
-    access-control: ::1 allow
+$( [ "$enable_ipv6" = "yes" ] && echo "    access-control: ::1 allow" )
     private-address: 192.168.0.0/16
     private-address: 172.16.0.0/12
     private-address: 10.0.0.0/8
-    private-address: fd00::/8
-    private-address: fe80::/10
+$( [ "$enable_ipv6" = "yes" ] && echo "    private-address: fd00::/8" )
+$( [ "$enable_ipv6" = "yes" ] && echo "    private-address: fe80::/10" )
 
 forward-zone:
     name: "."
