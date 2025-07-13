@@ -359,7 +359,7 @@ server:
 
 forward-zone:
     name: "."
-    forward-first: yes
+    forward-first: no
     forward-addr: ${primary_dns}
     forward-addr: ${secondary_dns}
     forward-addr: ${ipv6_primary_dns}
