@@ -231,6 +231,35 @@ choose_dns_provider() {
   fi
 }
 
+# Function to choose IP mode
+choose_ip_mode() {
+  local choice
+  echo -e "\n${BLUE}=== IP Mode Selection ===${NC}"
+  echo "1) IPv4 only"
+  echo "2) IPv4 + IPv6"
+  echo "3) IPv6 only"
+  read -p "Enter your choice [1-3]: " choice
+  case $choice in
+    1)
+      enable_ipv4="yes"
+      enable_ipv6="no"
+      ;;
+    2)
+      enable_ipv4="yes"
+      enable_ipv6="yes"
+      ;;
+    3)
+      enable_ipv4="no"
+      enable_ipv6="yes"
+      ;;
+    *)
+      warning "Invalid choice. Defaulting to IPv4 + IPv6"
+      enable_ipv4="yes"
+      enable_ipv6="yes"
+      ;;
+  esac
+}
+
 # Check resolv.conf status
 echo -e "\n${BLUE}=== Checking /etc/resolv.conf ===${NC}"
 if [ ! -f /etc/resolv.conf ]; then
@@ -267,6 +296,9 @@ fi
 
 # Ask for DNS provider
 choose_dns_provider
+
+# Ask for IP mode
+choose_ip_mode
 
 # Check if systemd-resolved is installed
 echo -e "\n${BLUE}=== Checking for systemd-resolved ===${NC}"
@@ -331,8 +363,8 @@ server:
     rrset-cache-size: 256m
     prefetch: yes
     prefetch-key: yes
-    do-ip4: yes
-    do-ip6: yes
+    do-ip4: ${enable_ipv4}
+    do-ip6: ${enable_ipv6}
     do-udp: yes
     do-tcp: yes
     verbosity: 0
@@ -360,11 +392,16 @@ server:
 forward-zone:
     name: "."
     forward-first: no
-    forward-addr: ${primary_dns}
-    forward-addr: ${secondary_dns}
-    forward-addr: ${ipv6_primary_dns}
-    forward-addr: ${ipv6_secondary_dns}
 EOF
+
+if [ "$enable_ipv4" = "yes" ]; then
+  echo "    forward-addr: ${primary_dns}" >> "${CONF_FILE}"
+  echo "    forward-addr: ${secondary_dns}" >> "${CONF_FILE}"
+fi
+if [ "$enable_ipv6" = "yes" ]; then
+  [ -n "$ipv6_primary_dns" ] && echo "    forward-addr: ${ipv6_primary_dns}" >> "${CONF_FILE}"
+  [ -n "$ipv6_secondary_dns" ] && echo "    forward-addr: ${ipv6_secondary_dns}" >> "${CONF_FILE}"
+fi
 
 echo -e "\n${BLUE}=== Checking Unbound configuration ===${NC}"
 if ! unbound-checkconf; then
@@ -424,10 +461,10 @@ if [ -L /etc/resolv.conf ] || [ -f /etc/resolv.conf ]; then
 fi
 
 # Create new resolv.conf
-if ! cat > /etc/resolv.conf <<'EOF'; then
-nameserver 127.0.0.1
-nameserver ::1
-EOF
+if ! {
+  [ "$enable_ipv4" = "yes" ] && echo "nameserver 127.0.0.1"
+  [ "$enable_ipv6" = "yes" ] && echo "nameserver ::1"
+} > /etc/resolv.conf; then
   error_exit "Failed to create new resolv.conf file"
 fi
 
