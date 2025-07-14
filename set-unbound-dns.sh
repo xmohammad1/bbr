@@ -363,11 +363,8 @@ server:
     num-threads: ${cores}
     so-reuseport: yes
     cache-max-ttl: 86400
-    cache-min-ttl: 60
-    msg-cache-size: 256m
-    rrset-cache-size: 256m
+    cache-min-ttl: 3600
     prefetch: yes
-    prefetch-key: yes
     do-ip4: ${enable_ipv4}
     do-ip6: ${enable_ipv6}
     do-udp: yes
@@ -376,15 +373,9 @@ server:
     log-queries: no
     log-replies: no
     logfile: ""
-    harden-dnssec-stripped: no
-    harden-below-nxdomain: no
-    val-clean-additional: no
     interface: 127.0.0.1
 $( [ "$enable_ipv6" = "yes" ] && echo "    interface: ::1" )
     port: 53
-    module-config: "iterator"
-    serve-expired: yes
-    serve-expired-client-timeout: 0
     access-control: 127.0.0.0/8 allow
 $( [ "$enable_ipv6" = "yes" ] && echo "    access-control: ::1 allow" )
     private-address: 192.168.0.0/16
