@@ -384,7 +384,6 @@ $( [ "$enable_ipv6" = "yes" ] && echo "    interface: ::1" )
     port: 53
     module-config: "iterator"
     serve-expired: yes
-    serve-expired-ttl: 86400
     serve-expired-client-timeout: 0
     access-control: 127.0.0.0/8 allow
 $( [ "$enable_ipv6" = "yes" ] && echo "    access-control: ::1 allow" )
