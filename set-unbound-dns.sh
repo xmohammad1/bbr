@@ -169,32 +169,6 @@ choose_dns_provider() {
           fi
         done
         
-        read -p "Do you want to add IPv6 DNS servers? (y/n): " add_ipv6
-        
-        if [[ $add_ipv6 =~ ^[Yy]$ ]]; then
-          while true; do
-            read -p "Primary DNS server (IPv6, e.g. 2001:4860:4860::8888): " ipv6_primary_dns
-            if [ -z "$ipv6_primary_dns" ]; then
-              break
-            elif validate_ipv6 "$ipv6_primary_dns"; then
-              break
-            else
-              warning "Invalid IPv6 address format. Please enter a valid IPv6 address or leave blank to skip."
-            fi
-          done
-          
-          while true; do
-            read -p "Secondary DNS server (IPv6, e.g. 2001:4860:4860::8844): " ipv6_secondary_dns
-            if [ -z "$ipv6_secondary_dns" ]; then
-              break
-            elif validate_ipv6 "$ipv6_secondary_dns"; then
-              break
-            else
-              warning "Invalid IPv6 address format. Please enter a valid IPv6 address or leave blank to skip."
-            fi
-          done
-        fi
-        
         provider_name="Custom"
         valid_input=true
         ;;
@@ -242,7 +216,6 @@ choose_ip_mode() {
   echo -e "\n${BLUE}=== IP Mode Selection ===${NC}"
   echo "1) IPv4 only"
   echo "2) IPv4 + IPv6"
-  echo "3) IPv6 only"
   read -p "Enter your choice [1-3]: " choice
   case $choice in
     1)
@@ -251,10 +224,6 @@ choose_ip_mode() {
       ;;
     2)
       enable_ipv4="yes"
-      enable_ipv6="yes"
-      ;;
-    3)
-      enable_ipv4="no"
       enable_ipv6="yes"
       ;;
     *)
@@ -392,10 +361,6 @@ EOF
 if [ "$enable_ipv4" = "yes" ]; then
   echo "    forward-addr: ${primary_dns}" >> "${CONF_FILE}"
   echo "    forward-addr: ${secondary_dns}" >> "${CONF_FILE}"
-fi
-if [ "$enable_ipv6" = "yes" ]; then
-  [ -n "$ipv6_primary_dns" ] && echo "    forward-addr: ${ipv6_primary_dns}" >> "${CONF_FILE}"
-  [ -n "$ipv6_secondary_dns" ] && echo "    forward-addr: ${ipv6_secondary_dns}" >> "${CONF_FILE}"
 fi
 
 echo -e "\n${BLUE}=== Checking Unbound configuration ===${NC}"
