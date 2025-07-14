@@ -409,7 +409,15 @@ fi
 
 echo -e "\n${BLUE}=== Checking Unbound configuration ===${NC}"
 if ! unbound-checkconf; then
-  error_exit "Unbound configuration check failed. Please check the error messages above."
+  if grep -q "serve-expired-client-timeout" "$CONF_FILE"; then
+    warning "serve-expired-client-timeout is not supported. Removing the option and retrying."
+    sed -i '/serve-expired-client-timeout:/d' "$CONF_FILE"
+    if ! unbound-checkconf; then
+      error_exit "Unbound configuration check failed even after adjusting options. Please check the error messages above."
+    fi
+  else
+    error_exit "Unbound configuration check failed. Please check the error messages above."
+  fi
 fi
 
 echo -e "\n${BLUE}=== Restarting Unbound ===${NC}"
