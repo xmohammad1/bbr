@@ -119,33 +119,57 @@ choose_dns_provider() {
       1)
         primary_dns="1.1.1.1"
         secondary_dns="1.0.0.1"
-        ipv6_primary_dns="2606:4700:4700::1111"
-        ipv6_secondary_dns="2606:4700:4700::1001"
         provider_name="Cloudflare"
+        read -p "Include IPv6 DNS servers for Cloudflare? (y/n): " include_ipv6
+        if [[ $include_ipv6 =~ ^[Yy]$ ]]; then
+          ipv6_primary_dns="2606:4700:4700::1111"
+          ipv6_secondary_dns="2606:4700:4700::1001"
+        else
+          ipv6_primary_dns=""
+          ipv6_secondary_dns=""
+        fi
         valid_input=true
         ;;
       2)
         primary_dns="8.8.8.8"
         secondary_dns="8.8.4.4"
-        ipv6_primary_dns="2001:4860:4860::8888"
-        ipv6_secondary_dns="2001:4860:4860::8844"
         provider_name="Google"
+        read -p "Include IPv6 DNS servers for Google? (y/n): " include_ipv6
+        if [[ $include_ipv6 =~ ^[Yy]$ ]]; then
+          ipv6_primary_dns="2001:4860:4860::8888"
+          ipv6_secondary_dns="2001:4860:4860::8844"
+        else
+          ipv6_primary_dns=""
+          ipv6_secondary_dns=""
+        fi
         valid_input=true
         ;;
       3)
         primary_dns="9.9.9.9"
         secondary_dns="149.112.112.112"
-        ipv6_primary_dns="2620:fe::fe"
-        ipv6_secondary_dns="2620:fe::9"
         provider_name="Quad9"
+        read -p "Include IPv6 DNS servers for Quad9? (y/n): " include_ipv6
+        if [[ $include_ipv6 =~ ^[Yy]$ ]]; then
+          ipv6_primary_dns="2620:fe::fe"
+          ipv6_secondary_dns="2620:fe::9"
+        else
+          ipv6_primary_dns=""
+          ipv6_secondary_dns=""
+        fi
         valid_input=true
         ;;
       4)
         primary_dns="208.67.222.222"
         secondary_dns="208.67.220.220"
-        ipv6_primary_dns="2620:119:35::35"
-        ipv6_secondary_dns="2620:119:53::53"
         provider_name="OpenDNS"
+        read -p "Include IPv6 DNS servers for OpenDNS? (y/n): " include_ipv6
+        if [[ $include_ipv6 =~ ^[Yy]$ ]]; then
+          ipv6_primary_dns="2620:119:35::35"
+          ipv6_secondary_dns="2620:119:53::53"
+        else
+          ipv6_primary_dns=""
+          ipv6_secondary_dns=""
+        fi
         valid_input=true
         ;;
       5)
@@ -365,6 +389,14 @@ EOF
 if [ "$enable_ipv4" = "yes" ]; then
   echo "    forward-addr: ${primary_dns}" >> "${CONF_FILE}"
   echo "    forward-addr: ${secondary_dns}" >> "${CONF_FILE}"
+fi
+
+if [ "$enable_ipv6" = "yes" ] && [ -n "$ipv6_primary_dns" ]; then
+  echo "    forward-addr: ${ipv6_primary_dns}" >> "${CONF_FILE}"
+fi
+
+if [ "$enable_ipv6" = "yes" ] && [ -n "$ipv6_secondary_dns" ]; then
+  echo "    forward-addr: ${ipv6_secondary_dns}" >> "${CONF_FILE}"
 fi
 
 echo -e "\n${BLUE}=== Checking Unbound configuration ===${NC}"
@@ -647,16 +679,36 @@ read -p "Enter your choice [1-7]: " choice
 
 case $choice in
   1)
-    update_dns "1.1.1.1" "1.0.0.1" "Cloudflare" "2606:4700:4700::1111" "2606:4700:4700::1001"
+    read -p "Include IPv6 DNS servers for Cloudflare? (y/n): " include_ipv6
+    if [[ $include_ipv6 =~ ^[Yy]$ ]]; then
+      update_dns "1.1.1.1" "1.0.0.1" "Cloudflare" "2606:4700:4700::1111" "2606:4700:4700::1001"
+    else
+      update_dns "1.1.1.1" "1.0.0.1" "Cloudflare"
+    fi
     ;;
   2)
-    update_dns "8.8.8.8" "8.8.4.4" "Google" "2001:4860:4860::8888" "2001:4860:4860::8844"
+    read -p "Include IPv6 DNS servers for Google? (y/n): " include_ipv6
+    if [[ $include_ipv6 =~ ^[Yy]$ ]]; then
+      update_dns "8.8.8.8" "8.8.4.4" "Google" "2001:4860:4860::8888" "2001:4860:4860::8844"
+    else
+      update_dns "8.8.8.8" "8.8.4.4" "Google"
+    fi
     ;;
   3)
-    update_dns "9.9.9.9" "149.112.112.112" "Quad9" "2620:fe::fe" "2620:fe::9"
+    read -p "Include IPv6 DNS servers for Quad9? (y/n): " include_ipv6
+    if [[ $include_ipv6 =~ ^[Yy]$ ]]; then
+      update_dns "9.9.9.9" "149.112.112.112" "Quad9" "2620:fe::fe" "2620:fe::9"
+    else
+      update_dns "9.9.9.9" "149.112.112.112" "Quad9"
+    fi
     ;;
   4)
-    update_dns "208.67.222.222" "208.67.220.220" "OpenDNS" "2620:119:35::35" "2620:119:53::53"
+    read -p "Include IPv6 DNS servers for OpenDNS? (y/n): " include_ipv6
+    if [[ $include_ipv6 =~ ^[Yy]$ ]]; then
+      update_dns "208.67.222.222" "208.67.220.220" "OpenDNS" "2620:119:35::35" "2620:119:53::53"
+    else
+      update_dns "208.67.222.222" "208.67.220.220" "OpenDNS"
+    fi
     ;;
   5)
     echo -e "\n${YELLOW}Enter custom DNS servers:${NC}"
