@@ -332,7 +332,7 @@ server:
     num-threads: ${cores}
     so-reuseport: yes
     cache-max-ttl: 86400
-    cache-min-ttl: 3600
+    cache-min-ttl: 60
     prefetch: yes
     do-ip4: ${enable_ipv4}
     do-ip6: ${enable_ipv6}
@@ -342,6 +342,10 @@ server:
     log-queries: no
     log-replies: no
     logfile: ""
+    harden-dnssec-stripped: no
+    harden-below-nxdomain: no
+    val-clean-additional: no
+    module-config: "iterator"
     interface: 127.0.0.1
 $( [ "$enable_ipv6" = "yes" ] && echo "    interface: ::1" )
     port: 53
