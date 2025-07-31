@@ -76,7 +76,28 @@ dns_servers=(
     "199.85.126.10"
     "199.85.127.10"
 )
+# ---- NEW: Parse /etc/resolv.conf and merge its nameservers ----
+if [[ -r /etc/resolv.conf ]]; then
+    # Extract IPv4 or IPv6 addresses after the "nameserver" keyword
+    mapfile -t resolv_conf_servers < <(
+        grep -Eo '^\s*nameserver\s+[^#;]+' /etc/resolv.conf | awk '{print $2}'
+    )
 
+    # Append them to dns_servers array
+    for ip in "${resolv_conf_servers[@]}"; do
+        dns_servers+=("$ip")
+    done
+fi
+# ---- Deduplicate while preserving original order ----
+unique_dns=()
+declare -A seen
+for ip in "${dns_servers[@]}"; do
+    if [[ -z "${seen[$ip]}" ]]; then
+        unique_dns+=("$ip")
+        seen[$ip]=1
+    fi
+done
+dns_servers=("${unique_dns[@]}")
 # --- NEW: Array of target hosts ---
 target_hosts_array=(
     "google.com"
@@ -85,11 +106,11 @@ target_hosts_array=(
     "wikipedia.org"
 )
 
-ping_count=2 # Number of pings per server per target host
+ping_count=1 # Number of pings per server per target host
 ping_timeout=1
-dig_timeout=2
+dig_timeout=1
 dig_tries=1
-dig_repeat=2  # How many times to measure DNS query time for averaging per target
+dig_repeat=1  # How many times to measure DNS query time for averaging per target
 
 # --- Check Dependencies ---
 command -v dig >/dev/null 2>&1 || { echo >&2 "Error: 'dig' command not found. Please install dnsutils or bind-utils."; exit 1; }
