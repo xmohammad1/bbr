@@ -82,6 +82,7 @@ target_hosts_array=(
     "google.com"
     "instagram.com"
     "www.gstatic.com"
+    "wikipedia.org"
 )
 
 ping_count=2 # Number of pings per server per target host
