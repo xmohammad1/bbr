@@ -356,7 +356,7 @@ server:
     num-threads: ${cores}
     so-reuseport: yes
     cache-max-ttl: 86400
-    cache-min-ttl: 60
+    cache-min-ttl: 0
     prefetch: yes
     do-ip4: ${enable_ipv4}
     do-ip6: ${enable_ipv6}
