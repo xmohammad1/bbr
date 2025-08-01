@@ -355,9 +355,15 @@ cat > "${CONF_FILE}" <<EOF || error_exit "Failed to write unbound configuration"
 server:
     num-threads: ${cores}
     so-reuseport: yes
+    msg-cache-size: 50m
+    rrset-cache-size: 100m
     cache-max-ttl: 86400
-    cache-min-ttl: 0
+    cache-min-ttl: 3600
     prefetch: yes
+    prefetch-key: yes
+    so-rcvbuf: 1m
+    so-sndbuf: 1m
+    minimal-responses: yes
     do-ip4: ${enable_ipv4}
     do-ip6: ${enable_ipv6}
     do-udp: yes
