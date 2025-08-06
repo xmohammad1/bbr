@@ -336,13 +336,7 @@ cores=$(
   || echo 2
 )
 
-# Ensure at least 2 cores are used
-if [ "$cores" -lt 2 ]; then
-  cores=2
-  info "Setting cores to minimum of 2"
-else
-  info "Using detected $cores cores"
-fi
+cores=$((cores * 2))
 
 # Create Unbound configuration directory if it doesn't exist
 if [ ! -d "${CONF_DIR}" ]; then
@@ -355,10 +349,10 @@ cat > "${CONF_FILE}" <<EOF || error_exit "Failed to write unbound configuration"
 server:
     num-threads: ${cores}
     so-reuseport: yes
-    msg-cache-size: 50m
-    rrset-cache-size: 100m
+    msg-cache-size: 100m
+    rrset-cache-size: 200m
     cache-max-ttl: 86400
-    cache-min-ttl: 0
+    cache-min-ttl: 3600
     prefetch: yes
     prefetch-key: yes
     minimal-responses: yes
