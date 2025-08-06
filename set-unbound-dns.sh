@@ -349,6 +349,11 @@ cat > "${CONF_FILE}" <<EOF || error_exit "Failed to write unbound configuration"
 server:
     num-threads: ${cores}
     so-reuseport: yes
+    outgoing-range: 8192
+    incoming-num-tcp: 64
+    outgoing-num-tcp: 64
+    fastest-addr: yes
+    qname-minimisation: no
     msg-cache-size: 100m
     rrset-cache-size: 200m
     cache-max-ttl: 86400
