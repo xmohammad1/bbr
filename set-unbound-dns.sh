@@ -352,7 +352,6 @@ server:
     outgoing-range: 8192
     incoming-num-tcp: 64
     outgoing-num-tcp: 64
-    fastest-addr: yes
     qname-minimisation: no
     msg-cache-size: 100m
     rrset-cache-size: 200m
