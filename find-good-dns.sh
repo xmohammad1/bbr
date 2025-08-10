@@ -110,7 +110,7 @@ ping_count=3 # Number of pings per server per target host
 ping_timeout=1
 dig_timeout=1
 dig_tries=1
-dig_repeat=1  # How many times to measure DNS query time for averaging per target
+dig_repeat=0  # How many times to measure DNS query time for averaging per target
 
 # --- Check Dependencies ---
 command -v dig >/dev/null 2>&1 || { echo >&2 "Error: 'dig' command not found. Please install dnsutils or bind-utils."; exit 1; }
