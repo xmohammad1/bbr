@@ -106,7 +106,7 @@ target_hosts_array=(
     "wikipedia.org"
 )
 
-ping_count=1 # Number of pings per server per target host
+ping_count=3 # Number of pings per server per target host
 ping_timeout=1
 dig_timeout=1
 dig_tries=1
