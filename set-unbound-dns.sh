@@ -349,29 +349,13 @@ cat > "${CONF_FILE}" <<EOF || error_exit "Failed to write unbound configuration"
 server:
     num-threads: ${cores}
     so-reuseport: yes
-    outgoing-range: 8192
-    incoming-num-tcp: 64
-    outgoing-num-tcp: 64
-    qname-minimisation: no
-    msg-cache-size: 100m
-    rrset-cache-size: 200m
     cache-max-ttl: 86400
     cache-min-ttl: 3600
     prefetch: yes
-    prefetch-key: yes
-    minimal-responses: yes
     do-ip4: ${enable_ipv4}
     do-ip6: ${enable_ipv6}
     do-udp: yes
     do-tcp: yes
-    verbosity: 0
-    log-queries: no
-    log-replies: no
-    logfile: ""
-    harden-dnssec-stripped: no
-    harden-below-nxdomain: no
-    val-clean-additional: no
-    module-config: "iterator"
     interface: 127.0.0.1
 $( [ "$enable_ipv6" = "yes" ] && echo "    interface: ::1" )
     port: 53
@@ -382,16 +366,15 @@ $( [ "$enable_ipv6" = "yes" ] && echo "    access-control: ::1 allow" )
     private-address: 10.0.0.0/8
 $( [ "$enable_ipv6" = "yes" ] && echo "    private-address: fd00::/8" )
 $( [ "$enable_ipv6" = "yes" ] && echo "    private-address: fe80::/10" )
-
+    remote-control:
+        control-enable: yes
+        control-interface: 127.0.0.1
 forward-zone:
     name: "."
     forward-first: no
+    forward-addr: ${primary_dns}
+    forward-addr: ${secondary_dns}
 EOF
-
-if [ "$enable_ipv4" = "yes" ]; then
-  echo "    forward-addr: ${primary_dns}" >> "${CONF_FILE}"
-  echo "    forward-addr: ${secondary_dns}" >> "${CONF_FILE}"
-fi
 
 if [ "$enable_ipv6" = "yes" ] && [ -n "$ipv6_primary_dns" ]; then
   echo "    forward-addr: ${ipv6_primary_dns}" >> "${CONF_FILE}"
