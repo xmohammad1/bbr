@@ -336,8 +336,6 @@ cores=$(
   || echo 2
 )
 
-cores=$((cores * 2))
-
 # Create Unbound configuration directory if it doesn't exist
 if [ ! -d "${CONF_DIR}" ]; then
   mkdir -p "${CONF_DIR}" || error_exit "Failed to create unbound configuration directory"
