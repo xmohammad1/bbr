@@ -340,7 +340,7 @@ cores=$(
 if [ ! -d "${CONF_DIR}" ]; then
   mkdir -p "${CONF_DIR}" || error_exit "Failed to create unbound configuration directory"
 fi
-outrange=$(( cores * 2 + 1000 ))
+outrange=$(( cores * 1250 ))
 # Write Unbound configuration
 echo "Creating unbound configuration file..."
 cat > "${CONF_FILE}" <<EOF || error_exit "Failed to write unbound configuration"
