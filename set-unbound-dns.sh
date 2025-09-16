@@ -354,6 +354,17 @@ server:
     do-ip6: ${enable_ipv6}
     do-udp: yes
     do-tcp: yes
+    cache-max-negative-ttl: 3600
+    prefetch-key: yes
+    hide-identity: yes
+    hide-version: yes
+    rrset-roundrobin: yes
+    msg-cache-size: 100m
+    rrset-cache-size: 200m
+    num-queries-per-thread: 1024
+    outgoing-range: 5000
+    minimal-responses: yes
+    verbosity: 1
     interface: 127.0.0.1
 $( [ "$enable_ipv6" = "yes" ] && echo "    interface: ::1" )
     port: 53
