@@ -340,7 +340,7 @@ cores=$(
 if [ ! -d "${CONF_DIR}" ]; then
   mkdir -p "${CONF_DIR}" || error_exit "Failed to create unbound configuration directory"
 fi
-
+outrange=$(( cores * 2 + 1000 ))
 # Write Unbound configuration
 echo "Creating unbound configuration file..."
 cat > "${CONF_FILE}" <<EOF || error_exit "Failed to write unbound configuration"
@@ -362,7 +362,7 @@ server:
     msg-cache-size: 100m
     rrset-cache-size: 200m
     num-queries-per-thread: 1024
-    outgoing-range: 5000
+    outgoing-range: ${outrange}
     minimal-responses: yes
     verbosity: 1
     interface: 127.0.0.1
