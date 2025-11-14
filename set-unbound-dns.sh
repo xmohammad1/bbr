@@ -381,7 +381,6 @@ $( [ "$enable_ipv6" = "yes" ] && echo "    private-address: fe80::/10" )
 forward-zone:
     name: "."
     forward-first: no
-    forward-tls-upstream: no
     forward-addr: ${primary_dns}
     forward-addr: ${secondary_dns}
 EOF
