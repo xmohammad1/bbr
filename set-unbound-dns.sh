@@ -358,7 +358,6 @@ server:
     prefetch-key: yes
     hide-identity: yes
     hide-version: yes
-    rrset-roundrobin: yes
     msg-cache-size: 100m
     rrset-cache-size: 200m
     num-queries-per-thread: 1024
