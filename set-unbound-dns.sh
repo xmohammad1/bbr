@@ -362,7 +362,6 @@ server:
     rrset-cache-size: 200m
     num-queries-per-thread: 1024
     outgoing-range: ${outrange}
-    minimal-responses: yes
     verbosity: 1
     interface: 127.0.0.1
 $( [ "$enable_ipv6" = "yes" ] && echo "    interface: ::1" )
