@@ -354,10 +354,8 @@ server:
     do-ip6: ${enable_ipv6}
     do-udp: yes
     do-tcp: yes
-    cache-max-negative-ttl: 3600
+    cache-max-negative-ttl: 60
     prefetch-key: yes
-    hide-identity: yes
-    hide-version: yes
     msg-cache-size: 100m
     rrset-cache-size: 200m
     num-queries-per-thread: 1024
