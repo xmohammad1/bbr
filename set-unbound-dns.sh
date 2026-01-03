@@ -461,7 +461,6 @@ fi
 if ! {
   [ "$enable_ipv4" = "yes" ] && echo "nameserver 127.0.0.1"
   [ "$enable_ipv6" = "yes" ] && echo "nameserver ::1"
-  echo "options edns0 trust-ad"
   true
 } > /etc/resolv.conf; then
   error_exit "Failed to create new resolv.conf file"
