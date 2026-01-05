@@ -42,6 +42,10 @@ net.netfilter.nf_conntrack_tcp_timeout_time_wait = 60
 net.ipv4.conf.all.route_localnet = 1
 EOF
 
+sudo tee /etc/modules-load.d/nf_conntrack.conf <<EOF
+nf_conntrack
+EOF
+
 cat <<EOL > /etc/security/limits.conf
 * soft nproc 655350
 * hard nproc 655350
