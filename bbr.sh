@@ -5,7 +5,7 @@ echo "127.0.1.1 $(hostname)" | sudo tee -a $HOST_PATH > /dev/null
 echo "Hosts Fixed."
 fi
 Sysctl_file="/etc/sysctl.conf"
-
+sudo modprobe nf_conntrack
 cat >> $Sysctl_file <<EOF
 # Common settings
 fs.file-max = 200000
